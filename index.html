@@ -19,6 +19,7 @@
     <button class="menu-btn" @click="view='list'">게시글</button>
   </header>
 
+  <div v-if="apiError" class="api-alert"><span>{{ apiError }}</span><button @click="apiError=''">×</button></div>
   <main>
     <section v-show="view==='home'" class="home-layout">
       <aside class="map-filter">
@@ -31,12 +32,12 @@
       <div class="home-main">
         <div class="map-shell">
           <div id="map"></div>
-          <div class="map-status">{{ filteredPlaces.length }}개 장소 표시 중</div>
+          <div class="map-status">{{ loading.places ? '장소 불러오는 중...' : filteredPlaces.length + '개 장소 표시 중' }}</div>
         </div>
         <section class="recent-posts panel">
           <div class="section-head"><h2>최근 게시글</h2><button @click="view='list'">더보기 ›</button></div>
-          <button v-for="post in posts.slice(0,3)" :key="post.id" class="recent-row" @click="openPost(post)">
-            <span>○ {{ post.title }}</span><span>{{ relativeDate(post.createdAt) }}</span><span>💬 {{ post.comments.length }}</span>
+          <p v-if="loading.posts" class="loading-text">게시글을 불러오는 중입니다.</p><button v-for="post in posts.slice(0,3)" :key="post.id" class="recent-row" @click="openPost(post)">
+            <span>○ {{ post.title }}</span><span>{{ relativeDate(post.createdAt) }}</span><span>💬 {{ post.commentCount ?? post.comments?.length ?? 0 }}</span>
           </button>
         </section>
       </div>
@@ -52,7 +53,7 @@
       <div class="board-table">
         <div class="board-row board-head"><span>제목</span><span>장소(태그)</span><span>작성일</span><span>조회수</span><span>댓글수</span></div>
         <button v-for="post in filteredPosts" :key="post.id" class="board-row" @click="openPost(post)">
-          <span>○ {{ post.title }}</span><span><em>{{ placeName(post.placeIds[0]) }}</em></span><span>{{ relativeDate(post.createdAt) }}</span><span>{{ post.views }}</span><span>{{ post.comments.length }}</span>
+          <span>○ {{ post.title }}</span><span><em>{{ placeName(post.placeIds[0]) }}</em></span><span>{{ relativeDate(post.createdAt) }}</span><span>{{ post.views }}</span><span>{{ post.commentCount ?? post.comments?.length ?? 0 }}</span>
         </button>
       </div>
       <button class="back-link" @click="goHome">← 지도로 돌아가기</button>
@@ -64,9 +65,10 @@
       <p class="post-meta">작성자 {{ currentPost.author }} | {{ formatDate(currentPost.createdAt) }} | 조회 {{ currentPost.views }}</p>
       <div class="post-tags"><button v-for="id in currentPost.placeIds" :key="id" @click="focusPlaceById(id)">{{ placeName(id) }}</button></div>
       <p class="post-body">{{ currentPost.content }}</p>
-      <div class="comments"><h3>댓글 ({{ currentPost.comments.length }})</h3>
+      <div class="comments"><h3>댓글 ({{ currentPost.comments?.length || 0 }})</h3>
         <div v-for="comment in currentPost.comments" :key="comment.id" class="comment"><strong>{{ comment.author }}</strong><span>{{ comment.content }}</span></div>
       </div>
+      <form class="comment-form" @submit.prevent="submitComment"><input v-model.trim="commentForm.author" placeholder="작성자" required /><input v-model.trim="commentForm.content" placeholder="댓글을 입력하세요" required /><button class="primary" :disabled="loading.submit">댓글 등록</button></form>
       <div class="detail-actions"><button @click="requestPassword('edit')">수정</button><button class="danger" @click="requestPassword('delete')">삭제</button></div>
     </section>
 
@@ -80,7 +82,7 @@
         </label>
         <label>작성자<input v-model.trim="postForm.author" placeholder="닉네임" required /></label>
         <label>비밀번호<input v-model="postForm.password" type="password" placeholder="수정/삭제용 비밀번호" required /></label>
-        <div class="form-actions"><button type="button" @click="view=editingPostId?'detail':'list'">취소</button><button class="primary" type="submit">{{ editingPostId ? '수정 완료' : '등록' }}</button></div>
+        <div class="form-actions"><button type="button" @click="view=editingPostId?'detail':'list'">취소</button><button class="primary" type="submit" :disabled="loading.submit">{{ loading.submit ? '처리 중...' : (editingPostId ? '수정 완료' : '등록') }}</button></div>
       </form>
     </section>
   </main>
@@ -92,19 +94,19 @@
         <img v-if="placePopup.image && !brokenImages[placePopup.id]" :src="placePopup.image" :alt="placePopup.name" @error="markBroken(placePopup.id)" />
         <div v-else class="image-fallback">{{ placePopup.categoryIcon }}<small>이미지 없음</small></div>
       </div>
-      <div class="popup-body"><h2>{{ placePopup.name }}</h2><p>⭐ {{ placeRating(placePopup.id) }} (리뷰 {{ placeReviews(placePopup.id).length }})</p><span class="tag">{{ placePopup.category }}</span><p>{{ placePopup.address }}</p><strong>게시글 {{ postsForPlace(placePopup.id).length }}개</strong><button class="primary full" @click="openPlacePosts(placePopup)">게시글 보기</button></div>
+      <div class="popup-body"><h2>{{ placePopup.name }}</h2><p>⭐ {{ placeRating(placePopup) }} (리뷰 {{ placeReviews(placePopup) }})</p><span class="tag">{{ placePopup.category }}</span><p>{{ placePopup.address }}</p><strong>게시글 {{ postsForPlace(placePopup.id).length }}개</strong><button class="primary full" @click="openPlacePosts(placePopup)">게시글 보기</button></div>
     </section>
   </div>
 
   <div v-if="passwordModal.open" class="modal-backdrop" @click.self="passwordModal.open=false">
-    <section class="password-modal"><h2>비밀번호를 입력하세요</h2><input v-model="passwordModal.value" type="password" placeholder="비밀번호 입력" @keyup.enter="confirmPassword" /><label><input type="checkbox" v-model="passwordModal.show" @change="togglePasswordVisibility" /> 비밀번호 보기</label><p v-if="passwordModal.error" class="error">{{ passwordModal.error }}</p><div><button @click="passwordModal.open=false">취소</button><button class="primary" @click="confirmPassword">확인</button></div></section>
+    <section class="password-modal"><h2>비밀번호를 입력하세요</h2><input class="password-input" v-model="passwordModal.value" type="password" placeholder="비밀번호 입력" @keyup.enter="confirmPassword" /><label><input type="checkbox" v-model="passwordModal.show" @change="togglePasswordVisibility" /> 비밀번호 보기</label><p v-if="passwordModal.error" class="error">{{ passwordModal.error }}</p><div><button @click="passwordModal.open=false">취소</button><button class="primary" @click="confirmPassword">확인</button></div></section>
   </div>
 
   <button class="chatbot-fab" @click="chatOpen=!chatOpen">💬<span>챗봇</span></button>
   <section v-if="chatOpen" class="chat-panel">
     <div class="chat-head"><strong>지역 안내 챗봇</strong><button @click="chatOpen=false">×</button></div>
     <div class="chat-log"><p class="bot">가고 싶은 지역이나 장소 유형을 알려주세요.</p><p v-for="(m,i) in chatMessages" :key="i" :class="m.role">{{ m.text }}</p></div>
-    <form @submit.prevent="sendChat"><input v-model.trim="chatInput" placeholder="예: 구미 맛집 추천해줘" /><button>전송</button></form>
+    <form @submit.prevent="sendChat"><input v-model.trim="chatInput" placeholder="예: 구미 맛집 추천해줘" /><button :disabled="loading.chat">{{ loading.chat ? '응답 중' : '전송' }}</button></form>
   </section>
 
   <footer>이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다. 출처: 한국관광공사 · 라이선스: 공공누리 제3유형</footer>
