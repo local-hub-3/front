@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalHub 구미</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div id="app" v-cloak>
+  <header class="topbar">
+    <button class="brand" @click="goHome">LocalHub</button>
+    <select v-model="region" aria-label="지역 선택"><option>구미</option></select>
+    <div class="global-search">
+      <input v-model.trim="searchKeyword" placeholder="검색 (맛집, 관광지, 축제, 게시글...)" @keyup.enter="applySearch" />
+      <button @click="applySearch">검색</button>
+    </div>
+    <button class="menu-btn" @click="view='list'">게시글</button>
+  </header>
+
+  <main>
+    <section v-show="view==='home'" class="home-layout">
+      <aside class="map-filter">
+        <h3>장소 분류</h3>
+        <button v-for="category in mapCategories" :key="category" :class="{active:selectedCategory===category}" @click="selectCategory(category)">
+          <span>{{ categoryIcon(category) }}</span>{{ category }}
+        </button>
+        <button :class="{active:selectedCategory==='게시글 많은 곳'}" @click="selectCategory('게시글 많은 곳')"><span>💬</span>게시글 많은 곳</button>
+      </aside>
+      <div class="home-main">
+        <div class="map-shell">
+          <div id="map"></div>
+          <div class="map-status">{{ filteredPlaces.length }}개 장소 표시 중</div>
+        </div>
+        <section class="recent-posts panel">
+          <div class="section-head"><h2>최근 게시글</h2><button @click="view='list'">더보기 ›</button></div>
+          <button v-for="post in posts.slice(0,3)" :key="post.id" class="recent-row" @click="openPost(post)">
+            <span>○ {{ post.title }}</span><span>{{ relativeDate(post.createdAt) }}</span><span>💬 {{ post.comments.length }}</span>
+          </button>
+        </section>
+      </div>
+    </section>
+
+    <section v-if="view==='list'" class="page panel board-page">
+      <div class="page-title"><div><p>2. 게시글 목록</p><h1>지역 커뮤니티</h1></div><button class="primary" @click="startWrite">글 작성</button></div>
+      <div class="board-filters">
+        <select v-model="boardFilters.category"><option>전체</option><option v-for="c in mapCategories" :key="c">{{ c }}</option></select>
+        <select v-model="boardFilters.place"><option>전체 장소</option><option v-for="p in places.slice(0,80)" :key="p.id">{{ p.name }}</option></select>
+        <input v-model.trim="boardFilters.keyword" placeholder="검색어 입력" />
+      </div>
+      <div class="board-table">
+        <div class="board-row board-head"><span>제목</span><span>장소(태그)</span><span>작성일</span><span>조회수</span><span>댓글수</span></div>
+        <button v-for="post in filteredPosts" :key="post.id" class="board-row" @click="openPost(post)">
+          <span>○ {{ post.title }}</span><span><em>{{ placeName(post.placeIds[0]) }}</em></span><span>{{ relativeDate(post.createdAt) }}</span><span>{{ post.views }}</span><span>{{ post.comments.length }}</span>
+        </button>
+      </div>
+      <button class="back-link" @click="goHome">← 지도로 돌아가기</button>
+    </section>
+
+    <section v-if="view==='detail' && currentPost" class="page panel detail-page">
+      <button class="back-link" @click="view='list'">← 목록으로</button>
+      <h1>{{ currentPost.title }}</h1>
+      <p class="post-meta">작성자 {{ currentPost.author }} | {{ formatDate(currentPost.createdAt) }} | 조회 {{ currentPost.views }}</p>
+      <div class="post-tags"><button v-for="id in currentPost.placeIds" :key="id" @click="focusPlaceById(id)">{{ placeName(id) }}</button></div>
+      <p class="post-body">{{ currentPost.content }}</p>
+      <div class="comments"><h3>댓글 ({{ currentPost.comments.length }})</h3>
+        <div v-for="comment in currentPost.comments" :key="comment.id" class="comment"><strong>{{ comment.author }}</strong><span>{{ comment.content }}</span></div>
+      </div>
+      <div class="detail-actions"><button @click="requestPassword('edit')">수정</button><button class="danger" @click="requestPassword('delete')">삭제</button></div>
+    </section>
+
+    <section v-if="view==='write'" class="page panel write-page">
+      <div class="page-title"><div><p>4. 글 작성</p><h1>{{ editingPostId ? '게시글 수정' : '새 게시글 작성' }}</h1></div></div>
+      <form @submit.prevent="submitPost">
+        <label>제목<input v-model.trim="postForm.title" placeholder="제목을 입력하세요" required /></label>
+        <label>내용<textarea v-model.trim="postForm.content" placeholder="내용을 입력하세요" rows="9" required></textarea></label>
+        <label>장소(태그)
+          <select v-model="postForm.placeId" required><option value="">장소를 선택하세요</option><option v-for="p in places" :key="p.id" :value="p.id">{{ p.name }} — {{ p.category }}</option></select>
+        </label>
+        <label>작성자<input v-model.trim="postForm.author" placeholder="닉네임" required /></label>
+        <label>비밀번호<input v-model="postForm.password" type="password" placeholder="수정/삭제용 비밀번호" required /></label>
+        <div class="form-actions"><button type="button" @click="view=editingPostId?'detail':'list'">취소</button><button class="primary" type="submit">{{ editingPostId ? '수정 완료' : '등록' }}</button></div>
+      </form>
+    </section>
+  </main>
+
+  <div v-if="placePopup" class="modal-backdrop" @click.self="placePopup=null">
+    <section class="place-popup">
+      <button class="close" @click="placePopup=null">×</button>
+      <div class="popup-image">
+        <img v-if="placePopup.image && !brokenImages[placePopup.id]" :src="placePopup.image" :alt="placePopup.name" @error="markBroken(placePopup.id)" />
+        <div v-else class="image-fallback">{{ placePopup.categoryIcon }}<small>이미지 없음</small></div>
+      </div>
+      <div class="popup-body"><h2>{{ placePopup.name }}</h2><p>⭐ {{ placeRating(placePopup.id) }} (리뷰 {{ placeReviews(placePopup.id).length }})</p><span class="tag">{{ placePopup.category }}</span><p>{{ placePopup.address }}</p><strong>게시글 {{ postsForPlace(placePopup.id).length }}개</strong><button class="primary full" @click="openPlacePosts(placePopup)">게시글 보기</button></div>
+    </section>
+  </div>
+
+  <div v-if="passwordModal.open" class="modal-backdrop" @click.self="passwordModal.open=false">
+    <section class="password-modal"><h2>비밀번호를 입력하세요</h2><input v-model="passwordModal.value" type="password" placeholder="비밀번호 입력" @keyup.enter="confirmPassword" /><label><input type="checkbox" v-model="passwordModal.show" @change="togglePasswordVisibility" /> 비밀번호 보기</label><p v-if="passwordModal.error" class="error">{{ passwordModal.error }}</p><div><button @click="passwordModal.open=false">취소</button><button class="primary" @click="confirmPassword">확인</button></div></section>
+  </div>
+
+  <button class="chatbot-fab" @click="chatOpen=!chatOpen">💬<span>챗봇</span></button>
+  <section v-if="chatOpen" class="chat-panel">
+    <div class="chat-head"><strong>지역 안내 챗봇</strong><button @click="chatOpen=false">×</button></div>
+    <div class="chat-log"><p class="bot">가고 싶은 지역이나 장소 유형을 알려주세요.</p><p v-for="(m,i) in chatMessages" :key="i" :class="m.role">{{ m.text }}</p></div>
+    <form @submit.prevent="sendChat"><input v-model.trim="chatInput" placeholder="예: 구미 맛집 추천해줘" /><button>전송</button></form>
+  </section>
+
+  <footer>이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다. 출처: 한국관광공사 · 라이선스: 공공누리 제3유형</footer>
+</div>
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./places-data.js"></script>
+<script src="./app.js"></script>
+</body></html>
