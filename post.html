@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>LocalHub 게시글 상세</title>
+  
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<div id="app" v-cloak :data-theme="theme">
+
+<header class="topbar">
+  <button class="brand" type="button" onclick="location.href='index.html'">
+    <span class="brand-mark">L</span>
+    <span>LocalHub</span>
+  </button>
+  <select aria-label="지역 선택"><option>구미</option></select>
+  <div class="global-search">
+    <input v-model.trim="searchKeyword" placeholder="맛집, 관광지, 축제, 게시글 검색" @keyup.enter="submitGlobalSearch" />
+    <button type="button" @click="submitGlobalSearch">검색</button>
+  </div>
+  <nav class="top-actions">
+    <button class="nav-button" type="button" onclick="location.href='board.html'">게시판</button>
+    <button class="theme-toggle" type="button" @click="toggleTheme">
+      <span>{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
+      <span class="theme-label">{{ theme === 'dark' ? '라이트' : '다크' }}</span>
+    </button>
+  </nav>
+</header>
+
+<transition name="toast">
+  <aside v-if="toast.visible" class="toast-popup" :class="`toast-${toast.type}`" role="alert">
+    <span class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</span>
+    <div>
+      <strong>{{ toast.type === 'success' ? '완료' : '오류가 발생했습니다' }}</strong>
+      <p>{{ toast.message }}</p>
+    </div>
+    <button type="button" @click="hideToast">×</button>
+    <span class="toast-progress"></span>
+  </aside>
+</transition>
+
+<main>
+  <section v-if="post" class="page panel detail-page">
+    <button class="back-button page-back" type="button" @click="goBack"><span>←</span> {{ contextPlaceId ? '해당 장소 게시판으로' : '목록으로' }}</button>
+    <header class="detail-header">
+      <div class="post-tags">
+        <button v-for="id in post.placeIds" :key="id" type="button" @click="goPlace(id)">{{ placeName(id) }}</button>
+      </div>
+      <h1>{{ post.title }}</h1>
+      <p class="post-meta"><strong>{{ post.author }}</strong><span>{{ formatDate(post.createdAt) }}</span><span>조회 {{ post.views }}</span></p>
+    </header>
+    <article class="post-body">{{ post.content }}</article>
+
+    <section class="comments">
+      <div class="comments-heading"><h3>댓글 <span>{{ post.comments.length }}</span></h3></div>
+      <article v-for="comment in post.comments" :key="comment.id" class="comment">
+        <div class="comment-author"><strong>{{ comment.author }}</strong><time v-if="comment.createdAt">{{ formatDate(comment.createdAt) }}</time></div>
+        <p>{{ comment.content }}</p>
+        <div class="comment-actions">
+          <button type="button" @click="requestCommentAction('edit', comment)">수정</button>
+          <button class="danger" type="button" @click="requestCommentAction('delete', comment)">삭제</button>
+        </div>
+      </article>
+      <p v-if="!post.comments.length" class="empty-text">첫 댓글을 남겨보세요.</p>
+    </section>
+
+    <form class="comment-form" @submit.prevent="submitComment">
+      <input v-model.trim="commentForm.author" placeholder="작성자" required />
+      <input v-model.trim="commentForm.content" placeholder="댓글을 입력하세요" required />
+      <input v-model="commentForm.password" type="password" placeholder="수정·삭제용 비밀번호" required />
+      <button class="primary" :disabled="loading">{{ loading ? '등록 중' : '댓글 등록' }}</button>
+    </form>
+
+    <div class="detail-actions">
+      <button type="button" @click="requestPostAction('edit')">수정</button>
+      <button class="danger" type="button" @click="requestPostAction('delete')">삭제</button>
+    </div>
+  </section>
+</main>
+
+<div v-if="actionModal.open" class="modal-backdrop" @click.self="closeActionModal">
+  <section class="comment-modal">
+    <button class="back-button modal-back" type="button" @click="closeActionModal"><span>←</span> 돌아가기</button>
+    <button class="close" type="button" @click="closeActionModal">×</button>
+    <div class="modal-icon">{{ actionModal.action === 'delete' ? '🗑️' : '✏️' }}</div>
+    <h2>{{ actionModal.target === 'comment' ? '댓글' : '게시글' }} {{ actionModal.action === 'delete' ? '삭제' : '수정' }}</h2>
+    <label v-if="actionModal.target==='comment' && actionModal.action==='edit'" class="comment-edit-label">
+      <span>댓글 내용</span><textarea v-model.trim="actionModal.content" rows="5"></textarea>
+    </label>
+    <label class="comment-edit-label"><span>비밀번호</span><input v-model="actionModal.password" type="password" @keyup.enter="confirmAction" /></label>
+    <p v-if="actionModal.error" class="error">{{ actionModal.error }}</p>
+    <div class="modal-actions"><button type="button" @click="closeActionModal">취소</button><button class="primary" type="button" @click="confirmAction">확인</button></div>
+  </section>
+</div>
+
+<footer>
+  이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다.
+  출처: 한국관광공사 · 라이선스: 공공누리 제3유형
+</footer>
+
+</div>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="./config.js"></script>
+<script src="./shared.js"></script>
+
+<script src="./post.js"></script>
+</body></html>

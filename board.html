@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>LocalHub 게시판</title>
+  
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<div id="app" v-cloak :data-theme="theme">
+
+<header class="topbar">
+  <button class="brand" type="button" onclick="location.href='index.html'">
+    <span class="brand-mark">L</span>
+    <span>LocalHub</span>
+  </button>
+  <select aria-label="지역 선택"><option>구미</option></select>
+  <div class="global-search">
+    <input v-model.trim="searchKeyword" placeholder="맛집, 관광지, 축제, 게시글 검색" @keyup.enter="submitGlobalSearch" />
+    <button type="button" @click="submitGlobalSearch">검색</button>
+  </div>
+  <nav class="top-actions">
+    <button class="nav-button" type="button" onclick="location.href='board.html'">게시판</button>
+    <button class="theme-toggle" type="button" @click="toggleTheme">
+      <span>{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
+      <span class="theme-label">{{ theme === 'dark' ? '라이트' : '다크' }}</span>
+    </button>
+  </nav>
+</header>
+
+<transition name="toast">
+  <aside v-if="toast.visible" class="toast-popup" :class="`toast-${toast.type}`" role="alert">
+    <span class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</span>
+    <div>
+      <strong>{{ toast.type === 'success' ? '완료' : '오류가 발생했습니다' }}</strong>
+      <p>{{ toast.message }}</p>
+    </div>
+    <button type="button" @click="hideToast">×</button>
+    <span class="toast-progress"></span>
+  </aside>
+</transition>
+
+<main>
+  <section class="page panel board-page">
+    <button class="back-button page-back" type="button" @click="goBack"><span>←</span> {{ filters.placeId ? '선택한 장소로 돌아가기' : '지도로 돌아가기' }}</button>
+    <div class="page-title">
+      <div><p>LOCAL COMMUNITY</p><h1>구미 지역 게시판</h1><span>장소별 후기와 지역 정보를 자유롭게 공유하세요.</span></div>
+      <button class="primary" type="button" @click="startWrite">＋ 글 작성</button>
+    </div>
+
+    <div class="board-filters">
+      <select v-model="filters.category">
+        <option>전체</option>
+        <option v-for="c in mapCategories" :key="c">{{ c }}</option>
+      </select>
+      <select v-model="filters.placeId">
+        <option value="">전체 장소</option>
+        <option v-for="p in places" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <input v-model.trim="filters.keyword" placeholder="게시글 검색어 입력" />
+    </div>
+
+    <div class="board-table">
+      <div class="board-row board-head"><span>제목</span><span>장소</span><span>작성일</span><span>조회</span><span>댓글</span></div>
+      <button v-for="post in filteredPosts" :key="post.id" type="button" class="board-row" @click="openPost(post)">
+        <span class="board-title">{{ post.title }}</span>
+        <span><em>{{ placeName(post.placeIds?.[0]) }}</em></span>
+        <span>{{ relativeDate(post.createdAt) }}</span>
+        <span>{{ post.views }}</span>
+        <span>{{ post.commentCount }}</span>
+      </button>
+      <div v-if="!loading && !filteredPosts.length" class="board-empty">조건에 맞는 게시글이 없습니다.</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다.
+  출처: 한국관광공사 · 라이선스: 공공누리 제3유형
+</footer>
+
+</div>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="./config.js"></script>
+<script src="./shared.js"></script>
+
+<script src="./board.js"></script>
+</body></html>

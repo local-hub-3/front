@@ -4,519 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <title>LocalHub 구미</title>
+  <title>LocalHub 구미 지도</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+
 <div id="app" v-cloak :data-theme="theme">
-  <header class="topbar">
-    <button class="brand" type="button" @click="goHome">
-      <span class="brand-mark">L</span>
-      <span>LocalHub</span>
-    </button>
 
-    <select v-model="region" aria-label="지역 선택">
-      <option>구미</option>
-    </select>
-
-    <div class="global-search">
-      <input
-        v-model.trim="searchKeyword"
-        placeholder="맛집, 관광지, 축제, 게시글 검색"
-        @keyup.enter="applySearch"
-      />
-      <button type="button" @click="applySearch" aria-label="검색">검색</button>
-    </div>
-
-    <nav class="top-actions" aria-label="주요 메뉴">
-      <button class="nav-button" type="button" @click="view='list'">게시판</button>
-      <button
-        class="theme-toggle"
-        type="button"
-        :aria-label="theme === 'dark' ? '라이트 모드로 변경' : '다크 모드로 변경'"
-        :title="theme === 'dark' ? '라이트 모드' : '다크 모드'"
-        @click="toggleTheme"
-      >
-        <span aria-hidden="true">{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
-        <span class="theme-label">{{ theme === 'dark' ? '라이트' : '다크' }}</span>
-      </button>
-    </nav>
-  </header>
-
-  <transition name="toast">
-    <aside
-      v-if="toast.visible"
-      class="toast-popup"
-      :class="`toast-${toast.type}`"
-      role="alert"
-      aria-live="assertive"
-    >
-      <span class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</span>
-      <div>
-        <strong>{{ toast.type === 'success' ? '완료' : '오류가 발생했습니다' }}</strong>
-        <p>{{ toast.message }}</p>
-      </div>
-      <button type="button" aria-label="알림 닫기" @click="hideToast">×</button>
-      <span class="toast-progress"></span>
-    </aside>
-  </transition>
-
-  <main>
-    <section v-show="view==='home'" class="home-layout">
-      <aside class="map-filter">
-        <div class="filter-heading">
-          <span>탐색</span>
-          <h3>장소 분류</h3>
-        </div>
-
-        <button
-          type="button"
-          :class="{active:selectedCategory==='전체'}"
-          @click="selectCategory('전체')"
-        >
-          <span>{{ categoryIcon('전체') }}</span>전체
-        </button>
-
-        <button
-          v-for="category in mapCategories"
-          :key="category"
-          type="button"
-          :class="{active:selectedCategory===category}"
-          @click="selectCategory(category)"
-        >
-          <span>{{ categoryIcon(category) }}</span>{{ category }}
-        </button>
-
-        <button
-          type="button"
-          :class="{active:selectedCategory==='게시글 많은 곳'}"
-          @click="selectCategory('게시글 많은 곳')"
-        >
-          <span>💬</span>게시글 많은 곳
-        </button>
-      </aside>
-
-      <div class="home-main">
-        <div class="map-shell">
-          <div id="map"></div>
-          <div class="map-status">
-            <span class="status-dot"></span>
-            {{ loading.places ? '장소 불러오는 중' : filteredPlaces.length + '개 장소 표시 중' }}
-          </div>
-        </div>
-
-        <section class="recent-posts panel">
-          <div class="section-head">
-            <div>
-              <span class="section-kicker">COMMUNITY</span>
-              <h2>최근 게시글</h2>
-            </div>
-            <button type="button" @click="view='list'">전체 보기 →</button>
-          </div>
-
-          <p v-if="loading.posts" class="loading-text">게시글을 불러오는 중입니다.</p>
-
-          <button
-            v-for="post in posts.slice(0,3)"
-            :key="post.id"
-            type="button"
-            class="recent-row"
-            @click="openPost(post)"
-          >
-            <span class="recent-title">{{ post.title }}</span>
-            <span>{{ relativeDate(post.createdAt) }}</span>
-            <span>💬 {{ post.commentCount ?? post.comments?.length ?? 0 }}</span>
-          </button>
-
-          <p v-if="!loading.posts && !posts.length" class="empty-text">아직 게시글이 없습니다.</p>
-        </section>
-      </div>
-    </section>
-
-    <section v-if="view==='list'" class="page panel board-page">
-      <button class="back-button page-back" type="button" @click="goHome">
-        <span>←</span> 지도로 돌아가기
-      </button>
-
-      <div class="page-title">
-        <div>
-          <p>LOCAL COMMUNITY</p>
-          <h1>구미 지역 게시판</h1>
-          <span>장소별 후기와 지역 정보를 자유롭게 공유하세요.</span>
-        </div>
-        <button class="primary" type="button" @click="startWrite">＋ 글 작성</button>
-      </div>
-
-      <div class="board-filters">
-        <select v-model="boardFilters.category" aria-label="카테고리 필터">
-          <option>전체</option>
-          <option v-for="c in mapCategories" :key="c">{{ c }}</option>
-        </select>
-
-        <select v-model="boardFilters.placeId" aria-label="장소 필터">
-          <option value="">전체 장소</option>
-          <option v-for="p in places.slice(0,80)" :key="p.id" :value="p.id">
-            {{ p.name }}
-          </option>
-        </select>
-
-        <input v-model.trim="boardFilters.keyword" placeholder="게시글 검색어 입력" />
-      </div>
-
-      <div class="board-table">
-        <div class="board-row board-head">
-          <span>제목</span><span>장소</span><span>작성일</span><span>조회</span><span>댓글</span>
-        </div>
-
-        <button
-          v-for="post in filteredPosts"
-          :key="post.id"
-          type="button"
-          class="board-row"
-          @click="openPost(post)"
-        >
-          <span class="board-title">{{ post.title }}</span>
-          <span><em>{{ placeName(post.placeIds?.[0]) }}</em></span>
-          <span>{{ relativeDate(post.createdAt) }}</span>
-          <span>{{ post.views }}</span>
-          <span>{{ post.commentCount ?? post.comments?.length ?? 0 }}</span>
-        </button>
-
-        <div v-if="!filteredPosts.length" class="board-empty">조건에 맞는 게시글이 없습니다.</div>
-      </div>
-    </section>
-
-    <section v-if="view==='detail' && currentPost" class="page panel detail-page">
-      <button class="back-button page-back" type="button" @click="view='list'">
-        <span>←</span> 목록으로
-      </button>
-
-      <header class="detail-header">
-        <div class="post-tags">
-          <button
-            v-for="id in currentPost.placeIds"
-            :key="id"
-            type="button"
-            @click="focusPlaceById(id)"
-          >
-            {{ placeName(id) }}
-          </button>
-        </div>
-        <h1>{{ currentPost.title }}</h1>
-        <p class="post-meta">
-          <strong>{{ currentPost.author }}</strong>
-          <span>{{ formatDate(currentPost.createdAt) }}</span>
-          <span>조회 {{ currentPost.views }}</span>
-        </p>
-      </header>
-
-      <article class="post-body">{{ currentPost.content }}</article>
-
-      <section class="comments">
-        <div class="comments-heading">
-          <h3>댓글 <span>{{ currentPost.comments?.length || 0 }}</span></h3>
-        </div>
-
-        <article
-          v-for="comment in currentPost.comments"
-          :key="comment.id"
-          class="comment"
-        >
-          <div class="comment-author">
-            <strong>{{ comment.author }}</strong>
-            <time v-if="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
-          </div>
-
-          <p>{{ comment.content }}</p>
-
-          <div class="comment-actions">
-            <button
-              type="button"
-              @click="requestCommentAction('edit', comment)"
-            >
-              수정
-            </button>
-            <button
-              class="danger"
-              type="button"
-              @click="requestCommentAction('delete', comment)"
-            >
-              삭제
-            </button>
-          </div>
-        </article>
-
-        <p v-if="!currentPost.comments?.length" class="empty-text">첫 댓글을 남겨보세요.</p>
-      </section>
-
-      <form class="comment-form" @submit.prevent="submitComment">
-        <input v-model.trim="commentForm.author" placeholder="작성자" required />
-        <input v-model.trim="commentForm.content" placeholder="댓글을 입력하세요" required />
-        <input
-          v-model="commentForm.password"
-          type="password"
-          placeholder="수정·삭제용 비밀번호"
-          required
-        />
-        <button class="primary" :disabled="loading.submit">
-          {{ loading.submit ? '등록 중' : '댓글 등록' }}
-        </button>
-      </form>
-
-      <div class="detail-actions">
-        <button type="button" @click="requestPassword('edit')">수정</button>
-        <button class="danger" type="button" @click="requestPassword('delete')">삭제</button>
-      </div>
-    </section>
-
-    <section v-if="view==='write'" class="page panel write-page">
-      <button
-        class="back-button page-back"
-        type="button"
-        @click="view=editingPostId?'detail':'list'"
-      >
-        <span>←</span> {{ editingPostId ? '게시글로 돌아가기' : '목록으로' }}
-      </button>
-
-      <div class="page-title write-heading">
-        <div>
-          <p>WRITE POST</p>
-          <h1>{{ editingPostId ? '게시글 수정' : '새 게시글 작성' }}</h1>
-          <span>지역 주민에게 도움이 되는 정보를 작성해 주세요.</span>
-        </div>
-      </div>
-
-      <form @submit.prevent="submitPost">
-        <label>
-          <span>제목</span>
-          <input v-model.trim="postForm.title" placeholder="제목을 입력하세요" required />
-        </label>
-
-        <label>
-          <span>내용</span>
-          <textarea
-            v-model.trim="postForm.content"
-            placeholder="방문 경험, 추천 이유, 이용 팁 등을 입력하세요."
-            rows="10"
-            required
-          ></textarea>
-        </label>
-
-        <label>
-          <span>장소 태그</span>
-          <select v-model="postForm.placeId" required>
-            <option value="">장소를 선택하세요</option>
-            <option v-for="p in places" :key="p.id" :value="p.id">
-              {{ p.name }} — {{ p.category }}
-            </option>
-          </select>
-        </label>
-
-        <div class="form-grid">
-          <label>
-            <span>작성자</span>
-            <input v-model.trim="postForm.author" placeholder="닉네임" required />
-          </label>
-
-          <label>
-            <span>비밀번호</span>
-            <input
-              v-model="postForm.password"
-              type="password"
-              placeholder="수정·삭제 확인용"
-              required
-            />
-          </label>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" @click="view=editingPostId?'detail':'list'">취소</button>
-          <button class="primary" type="submit" :disabled="loading.submit">
-            {{ loading.submit ? '처리 중...' : (editingPostId ? '수정 완료' : '등록') }}
-          </button>
-        </div>
-      </form>
-    </section>
-  </main>
-
-  <div v-if="placePopup" class="modal-backdrop" @click.self="closePlacePopup">
-    <section class="place-popup" role="dialog" aria-modal="true">
-      <button class="back-button modal-back" type="button" @click="closePlacePopup">
-        <span>←</span> 지도
-      </button>
-      <button class="close" type="button" aria-label="팝업 닫기" @click="closePlacePopup">×</button>
-
-      <div class="popup-image">
-        <img
-          v-if="placePopup.image && !brokenImages[placePopup.id]"
-          :src="placePopup.image"
-          :alt="placePopup.name"
-          @error="markBroken(placePopup.id)"
-        />
-        <div v-else class="image-fallback">
-          {{ placePopup.categoryIcon }}<small>이미지 없음</small>
-        </div>
-      </div>
-
-      <div class="popup-body">
-        <span class="tag">{{ placePopup.category }}</span>
-        <h2>{{ placePopup.name }}</h2>
-        <p class="popup-rating">⭐ {{ placeRating(placePopup) }} · 리뷰 {{ placeReviews(placePopup) }}</p>
-        <p class="popup-address">{{ placePopup.address }}</p>
-        <div class="popup-post-count">
-          <span>연결된 게시글</span>
-          <strong>{{ postsForPlace(placePopup.id).length }}개</strong>
-        </div>
-        <button class="primary full" type="button" @click="openPlacePosts(placePopup)">
-          관련 게시글 보기
-        </button>
-      </div>
-    </section>
-  </div>
-
-  <div v-if="passwordModal.open" class="modal-backdrop" @click.self="closePasswordModal">
-    <section class="password-modal" role="dialog" aria-modal="true">
-      <button class="back-button modal-back" type="button" @click="closePasswordModal">
-        <span>←</span> 게시글
-      </button>
-      <button class="close" type="button" aria-label="팝업 닫기" @click="closePasswordModal">×</button>
-
-      <div class="modal-icon">🔐</div>
-      <h2>비밀번호 확인</h2>
-      <p>게시글 {{ passwordModal.action === 'delete' ? '삭제' : '수정' }}를 위해 작성 시 입력한 비밀번호를 입력하세요.</p>
-
-      <input
-        class="password-input"
-        v-model="passwordModal.value"
-        type="password"
-        placeholder="비밀번호 입력"
-        @keyup.enter="confirmPassword"
-      />
-
-      <label class="password-show">
-        <input
-          type="checkbox"
-          v-model="passwordModal.show"
-          @change="togglePasswordVisibility"
-        />
-        비밀번호 보기
-      </label>
-
-      <p v-if="passwordModal.error" class="error">{{ passwordModal.error }}</p>
-
-      <div class="modal-actions">
-        <button type="button" @click="closePasswordModal">취소</button>
-        <button class="primary" type="button" :disabled="loading.submit" @click="confirmPassword">
-          확인
-        </button>
-      </div>
-    </section>
-  </div>
-
-  <div
-    v-if="commentModal.open"
-    class="modal-backdrop"
-    @click.self="closeCommentModal"
-  >
-    <section class="comment-modal" role="dialog" aria-modal="true">
-      <button
-        class="back-button modal-back"
-        type="button"
-        @click="closeCommentModal"
-      >
-        <span>←</span> 댓글
-      </button>
-      <button
-        class="close"
-        type="button"
-        aria-label="댓글 팝업 닫기"
-        @click="closeCommentModal"
-      >
-        ×
-      </button>
-
-      <div class="modal-icon">
-        {{ commentModal.action === 'edit' ? '✏️' : '🗑️' }}
-      </div>
-      <h2>
-        댓글 {{ commentModal.action === 'edit' ? '수정' : '삭제' }}
-      </h2>
-
-      <label v-if="commentModal.action === 'edit'" class="comment-edit-label">
-        <span>댓글 내용</span>
-        <textarea
-          v-model.trim="commentModal.content"
-          rows="5"
-          placeholder="수정할 댓글 내용을 입력하세요."
-        ></textarea>
-      </label>
-
-      <label class="comment-edit-label">
-        <span>비밀번호</span>
-        <input
-          v-model="commentModal.password"
-          type="password"
-          placeholder="댓글 작성 시 입력한 비밀번호"
-          @keyup.enter="confirmCommentAction"
-        />
-      </label>
-
-      <p v-if="commentModal.error" class="error">
-        {{ commentModal.error }}
-      </p>
-
-      <div class="modal-actions">
-        <button type="button" @click="closeCommentModal">취소</button>
-        <button
-          class="primary"
-          :class="{ danger: commentModal.action === 'delete' }"
-          type="button"
-          :disabled="loading.submit"
-          @click="confirmCommentAction"
-        >
-          {{ loading.submit ? '처리 중...' : '확인' }}
-        </button>
-      </div>
-    </section>
-  </div>
-
-  <button class="chatbot-fab" type="button" @click="chatOpen=!chatOpen">
-    <span class="chat-icon">💬</span>
-    <span>챗봇</span>
+<header class="topbar">
+  <button class="brand" type="button" onclick="location.href='index.html'">
+    <span class="brand-mark">L</span>
+    <span>LocalHub</span>
   </button>
+  <select aria-label="지역 선택"><option>구미</option></select>
+  <div class="global-search">
+    <input v-model.trim="searchKeyword" placeholder="맛집, 관광지, 축제, 게시글 검색" @keyup.enter="submitGlobalSearch" />
+    <button type="button" @click="submitGlobalSearch">검색</button>
+  </div>
+  <nav class="top-actions">
+    <button class="nav-button" type="button" onclick="location.href='board.html'">게시판</button>
+    <button class="theme-toggle" type="button" @click="toggleTheme">
+      <span>{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
+      <span class="theme-label">{{ theme === 'dark' ? '라이트' : '다크' }}</span>
+    </button>
+  </nav>
+</header>
 
-  <section v-if="chatOpen" class="chat-panel">
-    <div class="chat-head">
-      <div>
-        <small>LOCAL GUIDE</small>
-        <strong>지역 안내 챗봇</strong>
+<transition name="toast">
+  <aside v-if="toast.visible" class="toast-popup" :class="`toast-${toast.type}`" role="alert">
+    <span class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</span>
+    <div>
+      <strong>{{ toast.type === 'success' ? '완료' : '오류가 발생했습니다' }}</strong>
+      <p>{{ toast.message }}</p>
+    </div>
+    <button type="button" @click="hideToast">×</button>
+    <span class="toast-progress"></span>
+  </aside>
+</transition>
+
+<main class="home-layout">
+  <aside class="map-filter">
+    <div class="filter-heading"><span>탐색</span><h3>장소 분류</h3></div>
+    <button type="button" :class="{active:selectedCategory==='전체'}" @click="selectCategory('전체')">
+      <span>🗺️</span>전체
+    </button>
+    <button v-for="category in mapCategories" :key="category" type="button"
+      :class="{active:selectedCategory===category}" @click="selectCategory(category)">
+      <span>{{ categoryIcon(category) }}</span>{{ category }}
+    </button>
+    <button type="button" :class="{active:selectedCategory==='게시글 많은 곳'}"
+      @click="selectCategory('게시글 많은 곳')">
+      <span>💬</span>게시글 많은 곳
+    </button>
+  </aside>
+
+  <div class="home-main">
+    <div class="map-shell">
+      <div id="map"></div>
+      <div class="map-status">
+        <span class="status-dot"></span>
+        {{ loading.places ? '장소 불러오는 중' : filteredPlaces.length + '개 장소 표시 중' }}
       </div>
-      <button type="button" aria-label="챗봇 닫기" @click="chatOpen=false">×</button>
     </div>
 
-    <div class="chat-log">
-      <p class="bot">가고 싶은 장소나 지역 정보를 알려주세요.</p>
-      <div v-for="(m,i) in chatMessages" :key="i" :class="['chat-message', m.role]">
-        {{ m.text }}
+    <section class="recent-posts panel">
+      <div class="section-head">
+        <div><span class="section-kicker">COMMUNITY</span><h2>최근 게시글</h2></div>
+        <button type="button" onclick="location.href='board.html'">전체 보기 →</button>
       </div>
-    </div>
+      <p v-if="loading.posts" class="loading-text">게시글을 불러오는 중입니다.</p>
+      <button v-for="post in posts.slice(0,3)" :key="post.id" type="button"
+        class="recent-row" @click="openPost(post)">
+        <span class="recent-title">{{ post.title }}</span>
+        <span>{{ relativeDate(post.createdAt) }}</span>
+        <span>💬 {{ post.commentCount }}</span>
+      </button>
+      <p v-if="!loading.posts && !posts.length" class="empty-text">아직 게시글이 없습니다.</p>
+    </section>
+  </div>
+</main>
 
-    <form @submit.prevent="sendChat">
-      <input v-model.trim="chatInput" placeholder="예: 구미 데이트 장소 추천" />
-      <button :disabled="loading.chat">{{ loading.chat ? '...' : '전송' }}</button>
-    </form>
+<div v-if="placePopup" class="modal-backdrop" @click.self="placePopup=null">
+  <section class="place-popup">
+    <button class="back-button modal-back" type="button" @click="placePopup=null"><span>←</span> 지도</button>
+    <button class="close" type="button" @click="placePopup=null">×</button>
+    <div class="popup-image">
+      <img v-if="placePopup.image && !brokenImages[placePopup.id]" :src="placePopup.image"
+        :alt="placePopup.name" @error="markBroken(placePopup.id)" />
+      <div v-else class="image-fallback">{{ placePopup.categoryIcon }}<small>이미지 없음</small></div>
+    </div>
+    <div class="popup-body">
+      <span class="tag">{{ placePopup.category }}</span>
+      <h2>{{ placePopup.name }}</h2>
+      <p class="popup-rating">⭐ {{ placeRating(placePopup) }} · 리뷰 {{ placeReviews(placePopup) }}</p>
+      <p class="popup-address">{{ placePopup.address }}</p>
+      <div class="popup-post-count"><span>연결된 게시글</span><strong>{{ postsForPlace(placePopup.id).length }}개</strong></div>
+      <button class="primary full" type="button" @click="openPlacePosts(placePopup)">관련 게시글 보기</button>
+    </div>
   </section>
-
-  <footer>
-    이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다.
-    출처: 한국관광공사 · 라이선스: 공공누리 제3유형
-  </footer>
 </div>
 
-<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<footer>
+  이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다.
+  출처: 한국관광공사 · 라이선스: 공공누리 제3유형
+</footer>
+
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
 <script src="./config.js"></script>
-<script src="./app.js"></script>
-</body>
-</html>
+<script src="./shared.js"></script>
+
+<script src="./home.js"></script>
+</body></html>

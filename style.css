@@ -1527,3 +1527,103 @@ footer {
     min-height: var(--footer-height);
   }
 }
+
+
+/* ===== 멀티 페이지 지도 안정화 ===== */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --topbar-height: 72px;
+  --footer-height: 44px;
+  --recent-panel-height: 205px;
+}
+
+.topbar {
+  height: var(--topbar-height);
+  min-height: var(--topbar-height);
+}
+
+.home-layout {
+  height: calc(100vh - var(--topbar-height) - var(--footer-height));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-main {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) var(--recent-panel-height);
+  overflow: hidden;
+}
+
+.map-filter {
+  top: var(--topbar-height);
+  height: 100%;
+  min-height: 0;
+}
+
+.map-shell,
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.map-status {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+}
+
+.recent-posts {
+  min-height: 0;
+  overflow: hidden;
+}
+
+footer {
+  height: var(--footer-height);
+  min-height: var(--footer-height);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Leaflet이 marker-wrap의 position과 transform을 직접 계산합니다.
+   wrapper에 position/transform을 강제로 지정하면 이동 후 좌표가 굳을 수 있습니다. */
+.marker-wrap {
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --topbar-height: 112px;
+  }
+
+  .home-layout {
+    height: auto;
+    min-height: calc(100vh - var(--topbar-height));
+    overflow: visible;
+  }
+
+  .home-main {
+    height: auto;
+    min-height: 650px;
+    grid-template-rows: 55vh auto;
+    overflow: visible;
+  }
+
+  .map-shell,
+  #map {
+    min-height: 55vh;
+  }
+
+  footer {
+    height: auto;
+    min-height: var(--footer-height);
+    padding: 12px 20px;
+  }
+}
