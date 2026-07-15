@@ -295,9 +295,7 @@ textarea {
   min-height: 430px;
 }
 
-[data-theme="dark"] .leaflet-tile-pane {
-  filter: brightness(0.78) contrast(1.12) saturate(0.75);
-}
+
 
 .map-status {
   position: absolute;
@@ -1200,35 +1198,9 @@ footer {
   background: var(--surface);
 }
 
-.marker-wrap {
-  border: 0;
-  background: transparent;
-}
 
-.marker {
-  width: 38px;
-  height: 38px;
-  border: 3px solid #ffffff;
-  border-radius: 50% 50% 50% 10%;
-  display: grid;
-  place-items: center;
-  background: #ef5b77;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
-  transform: rotate(-45deg);
-}
 
-.marker span {
-  transform: rotate(45deg);
-}
 
-.marker-12 { background: #f05d78; }
-.marker-39 { background: #df9b2c; }
-.marker-15 { background: #43a25d; }
-.marker-14 { background: #4776cc; }
-.marker-28 { background: #2767c9; }
-.marker-32 { background: #6d5ac8; }
-.marker-38 { background: #c54a9c; }
-.marker-25 { background: #2f8f93; }
 
 @media (max-width: 900px) {
   .topbar {
@@ -1591,10 +1563,7 @@ footer {
 
 /* Leaflet이 marker-wrap의 position과 transform을 직접 계산합니다.
    wrapper에 position/transform을 강제로 지정하면 이동 후 좌표가 굳을 수 있습니다. */
-.marker-wrap {
-  border: 0;
-  background: transparent;
-}
+
 
 @media (max-width: 640px) {
   :root,
@@ -1626,4 +1595,84 @@ footer {
     min-height: var(--footer-height);
     padding: 12px 20px;
   }
+}
+
+
+/* ===== Kakao Maps 커스텀 마커 ===== */
+.kakao-place-marker {
+  width: 46px;
+  height: 58px;
+  position: relative;
+  border: 0;
+  padding: 0;
+  display: block;
+  overflow: visible;
+  background: transparent;
+  cursor: pointer;
+}
+
+.kakao-marker-pin {
+  width: 42px;
+  height: 42px;
+  position: absolute;
+  left: 2px;
+  bottom: 9px;
+  border: 3px solid #ffffff;
+  border-radius: 50% 50% 50% 10%;
+  display: grid;
+  place-items: center;
+  background: #ef5b77;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.32);
+  transform: rotate(-45deg);
+  transition: transform 0.16s ease;
+}
+
+.kakao-marker-icon {
+  font-size: 18px;
+  line-height: 1;
+  transform: rotate(45deg);
+}
+
+.kakao-marker-tooltip {
+  max-width: 190px;
+  position: absolute;
+  left: 50%;
+  bottom: 58px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  display: none;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-50%);
+}
+
+.kakao-place-marker:hover .kakao-marker-pin,
+.kakao-place-marker:focus-visible .kakao-marker-pin {
+  transform: rotate(-45deg) scale(1.12);
+}
+
+.kakao-place-marker:hover .kakao-marker-tooltip,
+.kakao-place-marker:focus-visible .kakao-marker-tooltip {
+  display: block;
+}
+
+.kakao-marker-pin.marker-12 { background: #f05d78; }
+.kakao-marker-pin.marker-39 { background: #df9b2c; }
+.kakao-marker-pin.marker-15 { background: #43a25d; }
+.kakao-marker-pin.marker-14 { background: #4776cc; }
+.kakao-marker-pin.marker-28 { background: #2767c9; }
+.kakao-marker-pin.marker-32 { background: #6d5ac8; }
+.kakao-marker-pin.marker-38 { background: #c54a9c; }
+.kakao-marker-pin.marker-25 { background: #2f8f93; }
+
+/* 카카오 지도 기본 컨트롤이 상단 헤더 아래에서 보이도록 조정 */
+#map .map_zoom {
+  z-index: 10;
 }

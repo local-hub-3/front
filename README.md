@@ -29,3 +29,36 @@
 - `placeId`를 지도 → 게시판 → 상세 → 작성/수정 페이지까지 쿼리 문자열로 유지합니다.
 - 장소 게시판에서 글을 작성하면 작성 완료 후 해당 게시글 상세로 이동하며, 서버가 게시글 ID를 반환하지 않으면 해당 장소 게시판으로 돌아갑니다.
 - 작성 요청에는 서버 DTO 호환을 위해 `placeId`와 `placeIds`를 함께 전달합니다.
+
+
+## Kakao Maps 전환
+
+### 설정
+
+`config.js`에 Kakao Developers에서 발급받은 JavaScript 키를 입력합니다.
+
+```js
+window.APP_CONFIG = {
+  API_BASE_URL: 'https://백엔드주소/api',
+  KAKAO_MAP_JS_KEY: '카카오_JavaScript_키',
+  REQUEST_TIMEOUT_MS: 10000
+};
+```
+
+### Kakao Developers 도메인 등록
+
+Kakao Developers의 앱 설정에서 다음 도메인을 JavaScript SDK 도메인으로 등록해야 합니다.
+
+- 로컬 테스트 주소 예: `http://localhost:5500`
+- Netlify 주소 예: `https://your-site.netlify.app`
+- 커스텀 도메인을 사용하는 경우 해당 HTTPS 도메인
+
+### 변경된 파일
+
+- `index.html`: Leaflet CSS와 SDK 제거
+- `kakao-loader.js`: 카카오 지도 SDK 동적 로딩
+- `home.js`: Kakao Maps Map, CustomOverlay, LatLngBounds로 교체
+- `style.css`: 카카오 지도 커스텀 마커 스타일 추가
+- `config.js`: `KAKAO_MAP_JS_KEY` 항목 추가
+
+게시판, 게시글 상세, 작성 페이지와 서버 API 구조는 기존과 동일합니다.
