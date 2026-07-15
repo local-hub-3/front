@@ -63,7 +63,7 @@
       <div id="map"></div>
       <div class="map-status">
         <span class="status-dot"></span>
-        <span>{{ mapStatusText }}</span>
+        {{ loading.places ? '장소 불러오는 중' : filteredPlaces.length + '개 장소 표시 중' }}
       </div>
     </div>
 

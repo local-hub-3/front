@@ -8,7 +8,6 @@ createApp({
       places: [],
       posts: [],
       map: null,
-      mapNotice: '',
       markerOverlays: [],
       resizeObserver: null,
       placePopup: null,
@@ -30,22 +29,6 @@ createApp({
         '쇼핑',
         '여행코스',
       ];
-    },
-
-    mapStatusText() {
-      if (this.mapNotice) {
-        return this.mapNotice;
-      }
-
-      if (this.loading.map) {
-        return '지도 초기화 중...';
-      }
-
-      if (this.loading.places) {
-        return '장소 불러오는 중';
-      }
-
-      return `${this.filteredPlaces.length}개 장소 표시 중`;
     },
 
     filteredPlaces() {
@@ -184,10 +167,16 @@ createApp({
       this.loading.map = true;
 
       try {
-        await window.loadKakaoMapSdk();
+        const kakaoMaps = await window.loadKakaoMapSdk();
 
-        if (!window.kakao?.maps) {
-          throw new Error('카카오 지도 SDK를 사용할 수 없습니다.');
+        if (
+          !kakaoMaps ||
+          typeof kakaoMaps.Map !== 'function' ||
+          typeof kakaoMaps.LatLng !== 'function'
+        ) {
+          throw new Error(
+            '카카오 지도 SDK 초기화가 완료되지 않았습니다.'
+          );
         }
 
         const mapElement = document.getElementById('map');
@@ -203,22 +192,22 @@ createApp({
         const center = saved?.center || [36.1195, 128.3446];
         const level = Number(saved?.level) || 7;
 
-        this.map = new kakao.maps.Map(mapElement, {
-          center: new kakao.maps.LatLng(
+        this.map = new kakaoMaps.Map(mapElement, {
+          center: new kakaoMaps.LatLng(
             Number(center[0]),
             Number(center[1])
           ),
           level,
         });
 
-        const zoomControl = new kakao.maps.ZoomControl();
+        const zoomControl = new kakaoMaps.ZoomControl();
 
         this.map.addControl(
           zoomControl,
-          kakao.maps.ControlPosition.RIGHT
+          kakaoMaps.ControlPosition.RIGHT
         );
 
-        kakao.maps.event.addListener(
+        kakaoMaps.event.addListener(
           this.map,
           'idle',
           () => {
@@ -248,7 +237,6 @@ createApp({
         });
 
         this.resizeObserver.observe(mapElement);
-        this.mapNotice = '';
 
         this.renderMarkers();
 
@@ -263,7 +251,7 @@ createApp({
             );
 
             if (place) {
-              const position = new kakao.maps.LatLng(
+              const position = new kakaoMaps.LatLng(
                 place.latitude,
                 place.longitude
               );
@@ -275,9 +263,12 @@ createApp({
           }
         });
       } catch (error) {
-        console.warn('카카오 지도 준비 실패, 지도 없이 계속 진행합니다.', error);
-        this.map = null;
-        this.mapNotice = error?.message || '카카오 지도를 불러오지 못했습니다.';
+        console.error(error);
+
+        LocalHub.showToast(
+          this,
+          `카카오 지도를 초기화하지 못했습니다. ${error.message}`
+        );
       } finally {
         this.loading.map = false;
       }
