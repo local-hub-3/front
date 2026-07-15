@@ -40,6 +40,10 @@ createApp({
       ];
     },
 
+    recentLoopPosts() {
+      return this.posts.slice(0, 8);
+    },
+
     filteredPlaces() {
       const keyword = this.searchKeyword.toLocaleLowerCase('ko-KR');
 
@@ -106,7 +110,7 @@ createApp({
     submitGlobalSearch() {
       if (this.searchKeyword.startsWith('게시글:')) {
         location.href =
-          `board.html?q=${encodeURIComponent(
+          `/board/?q=${encodeURIComponent(
             this.searchKeyword.replace('게시글:', '').trim()
           )}`;
         return;
@@ -412,12 +416,12 @@ createApp({
 
     openPost(post) {
       location.href =
-        `post.html?id=${encodeURIComponent(post.id)}`;
+        `/post/?id=${encodeURIComponent(post.id)}`;
     },
 
     openPlacePosts(place) {
       location.href =
-        `board.html?placeId=${encodeURIComponent(place.id)}&from=map`;
+        `/board/?placeId=${encodeURIComponent(place.id)}&from=map`;
     },
 
     postsForPlace(id) {

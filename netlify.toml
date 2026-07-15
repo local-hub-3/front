@@ -1,0 +1,17 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/board"
+  to = "/board/"
+  status = 301
+
+[[redirects]]
+  from = "/post"
+  to = "/post/"
+  status = 301
+
+[[redirects]]
+  from = "/write"
+  to = "/write/"
+  status = 301

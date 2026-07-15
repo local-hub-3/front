@@ -26,7 +26,7 @@ createApp({
   async mounted() {
     LocalHub.applyTheme(this.theme);
     if (!this.postId) {
-      location.replace('board.html');
+      location.replace('/board/');
       return;
     }
     await Promise.all([this.fetchPlaces(), this.fetchPost()]);
@@ -44,7 +44,7 @@ createApp({
     },
 
     submitGlobalSearch() {
-      location.href = `board.html?q=${encodeURIComponent(this.searchKeyword)}`;
+      location.href = `/board/?q=${encodeURIComponent(this.searchKeyword)}`;
     },
 
     async fetchPlaces() {
@@ -80,7 +80,7 @@ createApp({
     },
 
     goPlace(id) {
-      location.href = `index.html?placeId=${encodeURIComponent(id)}`;
+      location.href = `/?placeId=${encodeURIComponent(id)}`;
     },
 
     goBack() {
@@ -95,7 +95,7 @@ createApp({
       }
 
       const query = params.toString();
-      location.href = query ? `board.html?${query}` : 'board.html';
+      location.href = query ? `/board/?${query}` : '/board/';
     },
 
     async submitComment() {
@@ -182,7 +182,7 @@ createApp({
           params.set('placeId', this.contextPlaceId);
         }
 
-        location.href = `write.html?${params.toString()}`;
+        location.href = `/write/?${params.toString()}`;
         return;
       }
 
@@ -203,8 +203,8 @@ createApp({
 
             location.replace(
               params.toString()
-                ? `board.html?${params.toString()}`
-                : 'board.html'
+                ? `/board/?${params.toString()}`
+                : '/board/'
             );
           }, 500);
           return;

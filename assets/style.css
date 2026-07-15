@@ -1431,9 +1431,10 @@ footer {
 }
 
 .map-status {
-  top: 16px;
+  top: auto;
   right: 16px;
-  bottom: auto;
+  bottom: 16px;
+  left: auto;
 }
 
 footer {
@@ -1542,9 +1543,10 @@ footer {
 }
 
 .map-status {
-  top: 16px;
+  top: auto;
   right: 16px;
-  bottom: auto;
+  bottom: 16px;
+  left: auto;
 }
 
 .recent-posts {
@@ -1913,5 +1915,186 @@ footer {
     bottom: 92px;
     width: calc(100vw - 20px);
     height: min(520px, calc(100vh - 118px));
+  }
+}
+
+
+/* ===== 최근 게시글 세로 자동 루프 ===== */
+.recent-posts {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.recent-loop-window {
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 12px,
+    #000 calc(100% - 12px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 12px,
+    #000 calc(100% - 12px),
+    transparent 100%
+  );
+}
+
+.recent-loop-track {
+  --recent-row-height: 48px;
+  display: flex;
+  flex-direction: column;
+  animation-name: recent-posts-scroll;
+  animation-duration: max(18s, calc(var(--recent-count) * 5s));
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.recent-loop-window:hover .recent-loop-track,
+.recent-loop-window:focus-within .recent-loop-track {
+  animation-play-state: paused;
+}
+
+.recent-loop-group {
+  flex: 0 0 auto;
+}
+
+.recent-loop-group .recent-row {
+  width: 100%;
+  min-height: var(--recent-row-height);
+  height: var(--recent-row-height);
+  margin: 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+@keyframes recent-posts-scroll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recent-loop-track {
+    animation: none;
+  }
+
+  .recent-loop-window {
+    overflow-y: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .recent-loop-group[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .map-status {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .recent-loop-window {
+    max-height: 240px;
+  }
+}
+
+
+/* ===== 80% 너비 최근 게시글 패널 ===== */
+.home-main .recent-posts {
+  width: 80%;
+  justify-self: start;
+}
+
+/* ===== 글자 없는 해/달 테마 토글 ===== */
+.nav-button {
+  display: none;
+}
+
+.theme-toggle {
+  width: 66px;
+  min-width: 66px;
+  height: 36px;
+  min-height: 36px;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  color: inherit;
+  background: linear-gradient(135deg, #dff3ff, #fff1b8);
+  box-shadow: inset 0 1px 3px rgba(20, 40, 70, 0.13);
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease;
+}
+
+[data-theme="dark"] .theme-toggle {
+  background: linear-gradient(135deg, #18213c, #342760);
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+  color: inherit;
+}
+
+.theme-sun,
+.theme-moon {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  font-size: 16px;
+  line-height: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.theme-sun {
+  left: 8px;
+}
+
+.theme-moon {
+  right: 8px;
+}
+
+.theme-thumb {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  background: #ffffff;
+  box-shadow: 0 3px 9px rgba(20, 30, 60, 0.28);
+  transition: transform 0.22s ease;
+}
+
+[data-theme="dark"] .theme-thumb {
+  transform: translateX(30px);
+  background: #242841;
+}
+
+@media (max-width: 900px) {
+  .home-main .recent-posts {
+    width: 100%;
   }
 }

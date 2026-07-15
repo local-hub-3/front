@@ -1,1 +1,3 @@
+# Local secret/config overrides
 .env
+.env.*

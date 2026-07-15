@@ -107,7 +107,7 @@ createApp({
         params.set('placeId', String(contextPlaceId));
       }
 
-      location.href = `post.html?${params.toString()}`;
+      location.href = `/post/?${params.toString()}`;
     },
 
     startWrite() {
@@ -119,17 +119,17 @@ createApp({
         params.set('placeId', String(this.filters.placeId));
       }
 
-      location.href = `write.html?${params.toString()}`;
+      location.href = `/write/?${params.toString()}`;
     },
 
     goBack() {
       if (this.filters.placeId) {
         location.href =
-          `index.html?placeId=${encodeURIComponent(this.filters.placeId)}`;
+          `/?placeId=${encodeURIComponent(this.filters.placeId)}`;
         return;
       }
 
-      location.href = 'index.html';
+      location.href = '/';
     },
   },
 }).mount('#app');

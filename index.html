@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
   <title>LocalHub 구미 지도</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="/assets/style.css" />
 </head>
 <body>
 
 <div id="app" v-cloak :data-theme="theme">
 
 <header class="topbar">
-  <button class="brand" type="button" onclick="location.href='index.html'">
+  <button class="brand" type="button" onclick="location.href='/'">
     <span class="brand-mark">L</span>
     <span>LocalHub</span>
   </button>
@@ -22,10 +22,19 @@
     <button type="button" @click="submitGlobalSearch">검색</button>
   </div>
   <nav class="top-actions">
-    <button class="nav-button" type="button" onclick="location.href='board.html'">게시판</button>
-    <button class="theme-toggle" type="button" @click="toggleTheme">
-      <span>{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
-      <span class="theme-label">{{ theme === 'dark' ? '라이트' : '다크' }}</span>
+    <button
+      class="theme-toggle"
+      type="button"
+      role="switch"
+      :aria-checked="theme === 'dark'"
+      :aria-label="theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'"
+      @click="toggleTheme"
+    >
+      <span class="theme-sun" aria-hidden="true">☀️</span>
+      <span class="theme-moon" aria-hidden="true">🌙</span>
+      <span class="theme-thumb" aria-hidden="true">
+        {{ theme === 'dark' ? '🌙' : '☀️' }}
+      </span>
     </button>
   </nav>
 </header>
@@ -70,16 +79,41 @@
     <section class="recent-posts panel">
       <div class="section-head">
         <div><span class="section-kicker">COMMUNITY</span><h2>최근 게시글</h2></div>
-        <button type="button" onclick="location.href='board.html'">전체 보기 →</button>
+        <button type="button" onclick="location.href='/board/'">전체 보기 →</button>
       </div>
       <p v-if="loading.posts" class="loading-text">게시글을 불러오는 중입니다.</p>
-      <button v-for="post in posts.slice(0,3)" :key="post.id" type="button"
-        class="recent-row" @click="openPost(post)">
-        <span class="recent-title">{{ post.title }}</span>
-        <span>{{ relativeDate(post.createdAt) }}</span>
-        <span>💬 {{ post.commentCount }}</span>
-      </button>
-      <p v-if="!loading.posts && !posts.length" class="empty-text">아직 게시글이 없습니다.</p>
+
+      <div
+        v-else-if="posts.length"
+        class="recent-loop-window"
+        aria-label="최근 게시글 자동 목록"
+      >
+        <div
+          class="recent-loop-track"
+          :style="{ '--recent-count': recentLoopPosts.length }"
+        >
+          <div
+            v-for="copy in 2"
+            :key="`recent-copy-${copy}`"
+            class="recent-loop-group"
+            :aria-hidden="copy === 2 ? 'true' : 'false'"
+          >
+            <button
+              v-for="post in recentLoopPosts"
+              :key="`${copy}-${post.id}`"
+              type="button"
+              class="recent-row"
+              @click="openPost(post)"
+            >
+              <span class="recent-title">{{ post.title }}</span>
+              <span>{{ relativeDate(post.createdAt) }}</span>
+              <span>💬 {{ post.commentCount }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p v-else class="empty-text">아직 게시글이 없습니다.</p>
     </section>
   </div>
 </main>
@@ -196,8 +230,8 @@
 </div>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
-<script src="./config.js"></script>
-<script src="./shared.js"></script>
-<script src="./kakao-loader.js"></script>
-<script src="./home.js"></script>
+<script src="/assets/config.js"></script>
+<script src="/assets/shared.js"></script>
+<script src="/assets/kakao-loader.js"></script>
+<script src="/assets/home.js"></script>
 </body></html>

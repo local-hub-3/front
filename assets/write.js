@@ -43,7 +43,7 @@ createApp({
     },
 
     submitGlobalSearch() {
-      location.href = `board.html?q=${encodeURIComponent(this.searchKeyword)}`;
+      location.href = `/board/?q=${encodeURIComponent(this.searchKeyword)}`;
     },
 
     async fetchPlaces() {
@@ -140,7 +140,7 @@ createApp({
               params.set('placeId', String(confirmedPlaceId));
             }
 
-            location.replace(`post.html?${params.toString()}`);
+            location.replace(`/post/?${params.toString()}`);
             return;
           }
 
@@ -154,8 +154,8 @@ createApp({
 
           location.replace(
             params.toString()
-              ? `board.html?${params.toString()}`
-              : 'board.html'
+              ? `/board/?${params.toString()}`
+              : '/board/'
           );
         }, 450);
       } catch (error) {
@@ -181,7 +181,7 @@ createApp({
           params.set('placeId', String(placeId));
         }
 
-        location.href = `post.html?${params.toString()}`;
+        location.href = `/post/?${params.toString()}`;
         return;
       }
 
@@ -193,8 +193,8 @@ createApp({
 
       location.href =
         params.toString()
-          ? `board.html?${params.toString()}`
-          : 'board.html';
+          ? `/board/?${params.toString()}`
+          : '/board/';
     },
   },
 }).mount('#app');
