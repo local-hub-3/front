@@ -2,9 +2,13 @@ const { createApp } = Vue;
 
 createApp({
   data() {
+    const savedTheme = localStorage.getItem('localhub-theme');
+    const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+
     return {
       region: '구미',
       view: 'home',
+      theme: savedTheme || (systemDark ? 'dark' : 'light'),
       map: null,
       markerLayer: null,
       places: [],
@@ -16,7 +20,7 @@ createApp({
       chatOpen: false,
       chatInput: '',
       chatMessages: [],
-      chatSessionId: this.createId(),
+      chatSessionId: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       editingPostId: null,
       currentPost: null,
       boardFilters: { category: '전체', placeId: '', keyword: '' },
@@ -24,7 +28,8 @@ createApp({
       postForm: { title: '', content: '', placeId: '', author: '', password: '' },
       commentForm: { author: '', content: '' },
       loading: { places: false, posts: false, detail: false, submit: false, chat: false },
-      apiError: '',
+      toast: { visible: false, message: '', type: 'error' },
+      toastTimer: null,
       apiBaseUrl: (window.APP_CONFIG?.API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, ''),
       requestTimeoutMs: window.APP_CONFIG?.REQUEST_TIMEOUT_MS || 10000,
     };
@@ -43,7 +48,11 @@ createApp({
       });
 
       if (this.selectedCategory === '게시글 많은 곳') {
-        return result.sort((a, b) => (b.postCount || this.postsForPlace(b.id).length) - (a.postCount || this.postsForPlace(a.id).length));
+        return [...result].sort(
+          (a, b) =>
+            (b.postCount || this.postsForPlace(b.id).length) -
+            (a.postCount || this.postsForPlace(a.id).length)
+        );
       }
 
       if (this.selectedCategory !== '전체') {
@@ -55,24 +64,55 @@ createApp({
 
     filteredPosts() {
       const keyword = this.boardFilters.keyword.toLocaleLowerCase('ko-KR');
+
       return this.posts.filter((post) => {
         const place = this.placeById(post.placeIds?.[0]);
-        const matchesCategory = this.boardFilters.category === '전체' || place?.category === this.boardFilters.category;
-        const matchesPlace = !this.boardFilters.placeId || post.placeIds?.includes(this.boardFilters.placeId);
+        const matchesCategory =
+          this.boardFilters.category === '전체' ||
+          place?.category === this.boardFilters.category;
+        const matchesPlace =
+          !this.boardFilters.placeId ||
+          post.placeIds?.includes(String(this.boardFilters.placeId));
         const text = `${post.title} ${post.content || ''}`.toLocaleLowerCase('ko-KR');
+
         return matchesCategory && matchesPlace && (!keyword || text.includes(keyword));
       });
     },
   },
 
   async mounted() {
+    document.documentElement.dataset.theme = this.theme;
     await Promise.all([this.fetchPlaces(), this.fetchPosts()]);
     this.$nextTick(() => this.initMap());
   },
 
+  beforeUnmount() {
+    clearTimeout(this.toastTimer);
+  },
+
   methods: {
-    createId() {
-      return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    toggleTheme() {
+      this.theme = this.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = this.theme;
+      localStorage.setItem('localhub-theme', this.theme);
+
+      this.$nextTick(() => {
+        this.map?.invalidateSize();
+      });
+    },
+
+    showToast(message, type = 'error') {
+      clearTimeout(this.toastTimer);
+      this.toast = { visible: true, message, type };
+
+      this.toastTimer = setTimeout(() => {
+        this.hideToast();
+      }, 3000);
+    },
+
+    hideToast() {
+      clearTimeout(this.toastTimer);
+      this.toast.visible = false;
     },
 
     async apiRequest(path, options = {}) {
@@ -90,7 +130,11 @@ createApp({
         });
 
         const contentType = response.headers.get('content-type') || '';
-        const body = contentType.includes('application/json') ? await response.json() : null;
+        let body = null;
+
+        if (contentType.includes('application/json')) {
+          body = await response.json();
+        }
 
         if (!response.ok) {
           const error = new Error(body?.message || `서버 요청에 실패했습니다. (${response.status})`);
@@ -104,6 +148,11 @@ createApp({
         if (error.name === 'AbortError') {
           throw new Error('서버 응답 시간이 초과되었습니다.');
         }
+
+        if (error instanceof TypeError) {
+          throw new Error('서버에 연결할 수 없습니다. 서버 주소와 실행 상태를 확인하세요.');
+        }
+
         throw error;
       } finally {
         clearTimeout(timeoutId);
@@ -139,110 +188,187 @@ createApp({
 
     async fetchPlaces() {
       this.loading.places = true;
-      this.apiError = '';
+
       try {
         const params = new URLSearchParams({ region: this.region, size: '500' });
         const data = await this.apiRequest(`/places?${params}`);
         const items = Array.isArray(data) ? data : data?.items || [];
-        this.places = items.map(this.normalizePlace).filter((place) => Number.isFinite(place.latitude) && Number.isFinite(place.longitude));
+
+        this.places = items
+          .map(this.normalizePlace)
+          .filter(
+            (place) =>
+              Number.isFinite(place.latitude) &&
+              Number.isFinite(place.longitude)
+          );
       } catch (error) {
-        this.apiError = `장소 데이터를 불러오지 못했습니다: ${error.message}`;
         console.error(error);
+        this.showToast(`장소 데이터를 불러오지 못했습니다. ${error.message}`);
       } finally {
         this.loading.places = false;
       }
     },
 
-    async fetchPosts() {
+    async fetchPosts(showSuccess = false) {
       this.loading.posts = true;
-      this.apiError = '';
+
       try {
         const data = await this.apiRequest('/posts?size=200&sort=latest');
         const items = Array.isArray(data) ? data : data?.items || [];
         this.posts = items.map(this.normalizePost);
+
+        if (showSuccess) {
+          this.showToast('게시글 정보가 갱신되었습니다.', 'success');
+        }
       } catch (error) {
-        this.apiError = `게시글을 불러오지 못했습니다: ${error.message}`;
         console.error(error);
+        this.showToast(`게시글을 불러오지 못했습니다. ${error.message}`);
       } finally {
         this.loading.posts = false;
       }
     },
 
     initMap() {
-      if (!window.L || this.map) return;
-      this.map = L.map('map', { center: [36.1195, 128.3446], zoom: 12, preferCanvas: true });
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(this.map);
-      this.markerLayer = L.layerGroup().addTo(this.map);
-      this.renderMarkers();
-      setTimeout(() => this.map.invalidateSize(), 100);
+      if (!window.L) {
+        this.showToast('지도 라이브러리를 불러오지 못했습니다.');
+        return;
+      }
+
+      if (this.map) return;
+
+      const mapElement = document.getElementById('map');
+
+      if (!mapElement) {
+        this.showToast('지도 영역을 찾지 못했습니다.');
+        return;
+      }
+
+      try {
+        this.map = L.map('map', {
+          center: [36.1195, 128.3446],
+          zoom: 12,
+          preferCanvas: true,
+        });
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap',
+        }).addTo(this.map);
+
+        this.markerLayer = L.layerGroup().addTo(this.map);
+        this.renderMarkers();
+        setTimeout(() => this.map.invalidateSize(), 100);
+      } catch (error) {
+        console.error(error);
+        this.showToast('지도를 초기화하지 못했습니다.');
+      }
     },
 
     renderMarkers() {
       if (!this.markerLayer) return;
+
       this.markerLayer.clearLayers();
+
       this.filteredPlaces.forEach((place) => {
         const marker = L.marker([place.latitude, place.longitude], {
           icon: L.divIcon({
             className: 'marker-wrap',
-            html: `<div class="marker marker-${place.contentTypeId || ''}">${place.categoryIcon}</div>`,
-            iconSize: [36, 44],
-            iconAnchor: [18, 44],
+            html: `<div class="marker marker-${place.contentTypeId || ''}"><span>${place.categoryIcon}</span></div>`,
+            iconSize: [38, 46],
+            iconAnchor: [19, 46],
           }),
         });
-        marker.on('click', () => { this.placePopup = place; });
-        marker.bindTooltip(place.name, { direction: 'top', offset: [0, -35] });
+
+        marker.on('click', () => {
+          this.placePopup = place;
+        });
+
+        marker.bindTooltip(place.name, {
+          direction: 'top',
+          offset: [0, -37],
+        });
+
         marker.addTo(this.markerLayer);
       });
     },
 
     selectCategory(category) {
       this.selectedCategory = category;
-      this.$nextTick(() => { this.renderMarkers(); this.fitMarkers(); });
+      this.$nextTick(() => {
+        this.renderMarkers();
+        this.fitMarkers();
+      });
     },
 
     applySearch() {
       this.view = 'home';
-      this.$nextTick(() => { this.renderMarkers(); this.fitMarkers(); });
+      this.$nextTick(() => {
+        this.map?.invalidateSize();
+        this.renderMarkers();
+
+        if (this.filteredPlaces.length) {
+          this.fitMarkers();
+        } else {
+          this.showToast('검색 조건에 맞는 장소가 없습니다.');
+        }
+      });
     },
 
     fitMarkers() {
       if (!this.map || !this.filteredPlaces.length) return;
-      const bounds = L.latLngBounds(this.filteredPlaces.map((place) => [place.latitude, place.longitude]));
+
+      const bounds = L.latLngBounds(
+        this.filteredPlaces.map((place) => [place.latitude, place.longitude])
+      );
+
       this.map.fitBounds(bounds, { padding: [35, 35], maxZoom: 14 });
     },
 
     goHome() {
       this.view = 'home';
-      this.$nextTick(() => { this.map?.invalidateSize(); this.renderMarkers(); });
+      this.$nextTick(() => {
+        this.map?.invalidateSize();
+        this.renderMarkers();
+      });
     },
 
     async openPost(post) {
       this.loading.detail = true;
-      this.apiError = '';
+
       try {
         const detail = await this.apiRequest(`/posts/${encodeURIComponent(post.id)}`);
         this.currentPost = this.normalizePost(detail);
-        const index = this.posts.findIndex((item) => String(item.id) === String(detail.id));
-        if (index >= 0) this.posts.splice(index, 1, this.currentPost);
+
+        const index = this.posts.findIndex(
+          (item) => String(item.id) === String(detail.id)
+        );
+
+        if (index >= 0) {
+          this.posts.splice(index, 1, this.currentPost);
+        }
+
         this.view = 'detail';
       } catch (error) {
-        this.apiError = `게시글 상세를 불러오지 못했습니다: ${error.message}`;
+        this.showToast(`게시글 상세를 불러오지 못했습니다. ${error.message}`);
       } finally {
         this.loading.detail = false;
       }
     },
 
     openPlacePosts(place) {
-      this.placePopup = null;
-      this.boardFilters.placeId = place.id;
+      this.closePlacePopup();
+      this.boardFilters.placeId = String(place.id);
       this.view = 'list';
     },
 
+    closePlacePopup() {
+      this.placePopup = null;
+    },
+
     postsForPlace(id) {
-      return this.posts.filter((post) => post.placeIds?.includes(String(id)));
+      return this.posts.filter((post) =>
+        post.placeIds?.includes(String(id))
+      );
     },
 
     placeById(id) {
@@ -255,9 +381,15 @@ createApp({
 
     focusPlaceById(id) {
       const place = this.placeById(id);
-      if (!place) return;
+
+      if (!place) {
+        this.showToast('연결된 장소 정보를 찾을 수 없습니다.');
+        return;
+      }
+
       this.placePopup = place;
       this.view = 'home';
+
       this.$nextTick(() => {
         this.map?.invalidateSize();
         this.map?.flyTo([place.latitude, place.longitude], 15);
@@ -266,13 +398,24 @@ createApp({
 
     startWrite() {
       this.editingPostId = null;
-      this.postForm = { title: '', content: '', placeId: '', author: '', password: '' };
+      this.postForm = {
+        title: '',
+        content: '',
+        placeId: '',
+        author: '',
+        password: '',
+      };
       this.view = 'write';
     },
 
     async submitPost() {
+      if (!this.postForm.placeId) {
+        this.showToast('게시글과 연결할 장소를 선택해 주세요.');
+        return;
+      }
+
       this.loading.submit = true;
-      this.apiError = '';
+
       const payload = {
         title: this.postForm.title,
         content: this.postForm.content,
@@ -283,32 +426,65 @@ createApp({
 
       try {
         const isEdit = this.editingPostId !== null;
-        const path = isEdit ? `/posts/${encodeURIComponent(this.editingPostId)}` : '/posts';
+        const path = isEdit
+          ? `/posts/${encodeURIComponent(this.editingPostId)}`
+          : '/posts';
+
         const result = await this.apiRequest(path, {
           method: isEdit ? 'PUT' : 'POST',
           body: JSON.stringify(payload),
         });
+
         this.currentPost = this.normalizePost(result);
         await this.fetchPosts();
         this.view = 'detail';
+        this.showToast(
+          isEdit ? '게시글이 수정되었습니다.' : '게시글이 등록되었습니다.',
+          'success'
+        );
       } catch (error) {
-        this.apiError = `게시글 저장에 실패했습니다: ${error.message}`;
+        this.showToast(`게시글 저장에 실패했습니다. ${error.message}`);
       } finally {
         this.loading.submit = false;
       }
     },
 
     requestPassword(action) {
-      this.passwordModal = { open: true, action, value: '', error: '', show: false };
+      this.passwordModal = {
+        open: true,
+        action,
+        value: '',
+        error: '',
+        show: false,
+      };
+    },
+
+    closePasswordModal() {
+      this.passwordModal = {
+        open: false,
+        action: '',
+        value: '',
+        error: '',
+        show: false,
+      };
     },
 
     async confirmPassword() {
-      if (!this.currentPost) return;
+      if (!this.currentPost) {
+        this.showToast('현재 게시글 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      if (!this.passwordModal.value) {
+        this.passwordModal.error = '비밀번호를 입력해 주세요.';
+        return;
+      }
+
       this.passwordModal.error = '';
       const password = this.passwordModal.value;
 
       if (this.passwordModal.action === 'edit') {
-        this.passwordModal.open = false;
+        this.closePasswordModal();
         this.editingPostId = this.currentPost.id;
         this.postForm = {
           title: this.currentPost.title,
@@ -322,47 +498,79 @@ createApp({
       }
 
       this.loading.submit = true;
+
       try {
-        await this.apiRequest(`/posts/${encodeURIComponent(this.currentPost.id)}`, {
-          method: 'DELETE',
-          body: JSON.stringify({ password }),
-        });
-        this.passwordModal.open = false;
+        await this.apiRequest(
+          `/posts/${encodeURIComponent(this.currentPost.id)}`,
+          {
+            method: 'DELETE',
+            body: JSON.stringify({ password }),
+          }
+        );
+
+        this.closePasswordModal();
         this.currentPost = null;
         await this.fetchPosts();
         this.view = 'list';
+        this.showToast('게시글이 삭제되었습니다.', 'success');
       } catch (error) {
         this.passwordModal.error = error.message;
+        this.showToast(`게시글 삭제에 실패했습니다. ${error.message}`);
       } finally {
         this.loading.submit = false;
       }
     },
 
     async submitComment() {
-      if (!this.currentPost || !this.commentForm.author || !this.commentForm.content) return;
+      if (
+        !this.currentPost ||
+        !this.commentForm.author ||
+        !this.commentForm.content
+      ) {
+        this.showToast('작성자와 댓글 내용을 모두 입력해 주세요.');
+        return;
+      }
+
       this.loading.submit = true;
+
       try {
-        const comment = await this.apiRequest(`/posts/${encodeURIComponent(this.currentPost.id)}/comments`, {
-          method: 'POST',
-          body: JSON.stringify(this.commentForm),
-        });
-        this.currentPost.comments = [...(this.currentPost.comments || []), comment];
+        const comment = await this.apiRequest(
+          `/posts/${encodeURIComponent(this.currentPost.id)}/comments`,
+          {
+            method: 'POST',
+            body: JSON.stringify(this.commentForm),
+          }
+        );
+
+        this.currentPost.comments = [
+          ...(this.currentPost.comments || []),
+          comment,
+        ];
         this.currentPost.commentCount = this.currentPost.comments.length;
         this.commentForm = { author: '', content: '' };
+        this.showToast('댓글이 등록되었습니다.', 'success');
       } catch (error) {
-        this.apiError = `댓글 등록에 실패했습니다: ${error.message}`;
+        this.showToast(`댓글 등록에 실패했습니다. ${error.message}`);
       } finally {
         this.loading.submit = false;
       }
     },
 
     togglePasswordVisibility(event) {
-      const input = event.target.closest('.password-modal')?.querySelector('input.password-input');
-      if (input) input.type = this.passwordModal.show ? 'text' : 'password';
+      const input = event.target
+        .closest('.password-modal')
+        ?.querySelector('input.password-input');
+
+      if (input) {
+        input.type = this.passwordModal.show ? 'text' : 'password';
+      }
     },
 
     markBroken(id) {
-      this.brokenImages = { ...this.brokenImages, [id]: true };
+      this.brokenImages = {
+        ...this.brokenImages,
+        [id]: true,
+      };
     },
 
     placeReviews(place) {
@@ -374,22 +582,52 @@ createApp({
     },
 
     categoryIcon(category) {
-      return ({ 전체: '🗺️', 관광지: '📍', 음식점: '🍽️', 축제공연행사: '🎉', 문화시설: '🎨', 레포츠: '🏃', 숙박: '🏨', 쇼핑: '🛍️', 여행코스: '🧭' })[category] || '📌';
+      return (
+        {
+          전체: '🗺️',
+          관광지: '📍',
+          음식점: '🍽️',
+          축제공연행사: '🎉',
+          문화시설: '🎨',
+          레포츠: '🏃',
+          숙박: '🏨',
+          쇼핑: '🛍️',
+          여행코스: '🧭',
+        }[category] || '📌'
+      );
     },
 
     formatDate(date) {
-      return new Date(date).toLocaleString('ko-KR');
+      if (!date) return '날짜 정보 없음';
+
+      const parsed = new Date(date);
+      return Number.isNaN(parsed.getTime())
+        ? '날짜 정보 없음'
+        : parsed.toLocaleString('ko-KR');
     },
 
     relativeDate(date) {
-      const diff = Date.now() - new Date(date).getTime();
-      if (diff < 3600000) return `${Math.max(1, Math.floor(diff / 60000))}분 전`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
+      if (!date) return '날짜 없음';
+
+      const time = new Date(date).getTime();
+      if (Number.isNaN(time)) return '날짜 없음';
+
+      const diff = Date.now() - time;
+
+      if (diff < 3600000) {
+        return `${Math.max(1, Math.floor(diff / 60000))}분 전`;
+      }
+
+      if (diff < 86400000) {
+        return `${Math.floor(diff / 3600000)}시간 전`;
+      }
+
       return `${Math.floor(diff / 86400000)}일 전`;
     },
 
     async sendChat() {
       if (!this.chatInput || this.loading.chat) return;
+
       const message = this.chatInput;
       this.chatMessages.push({ role: 'user', text: message });
       this.chatInput = '';
@@ -398,11 +636,24 @@ createApp({
       try {
         const result = await this.apiRequest('/chat', {
           method: 'POST',
-          body: JSON.stringify({ message, sessionId: this.chatSessionId, region: this.region }),
+          body: JSON.stringify({
+            message,
+            sessionId: this.chatSessionId,
+            region: this.region,
+          }),
         });
-        this.chatMessages.push({ role: 'bot', text: result.answer || '답변을 받지 못했습니다.', placeIds: result.recommendedPlaceIds || [] });
+
+        this.chatMessages.push({
+          role: 'bot',
+          text: result?.answer || '답변을 받지 못했습니다.',
+          placeIds: result?.recommendedPlaceIds || [],
+        });
       } catch (error) {
-        this.chatMessages.push({ role: 'bot', text: `챗봇 연결에 실패했습니다: ${error.message}` });
+        this.showToast(`챗봇 연결에 실패했습니다. ${error.message}`);
+        this.chatMessages.push({
+          role: 'bot',
+          text: '현재 챗봇 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        });
       } finally {
         this.loading.chat = false;
       }
@@ -414,8 +665,13 @@ createApp({
       clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(() => this.renderMarkers(), 150);
     },
+
     view(value) {
-      if (value === 'home') this.$nextTick(() => setTimeout(() => this.map?.invalidateSize(), 50));
+      if (value === 'home') {
+        this.$nextTick(() =>
+          setTimeout(() => this.map?.invalidateSize(), 50)
+        );
+      }
     },
   },
 }).mount('#app');
