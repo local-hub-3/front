@@ -1,7 +1,7 @@
 createApp({
   data() {
     return {
-      region: '구미',
+      region: '',
       theme: LocalHub.getInitialTheme(),
       searchKeyword: '',
       selectedCategory: '전체',
@@ -36,7 +36,6 @@ createApp({
         '레포츠',
         '숙박',
         '쇼핑',
-        '여행코스',
       ];
     },
 
@@ -54,15 +53,6 @@ createApp({
 
         return !keyword || text.includes(keyword);
       });
-
-      if (this.selectedCategory === '게시글 많은 곳') {
-        return [...result].sort(
-          (a, b) =>
-            (b.postCount || this.postsForPlace(b.id).length) -
-            (a.postCount || this.postsForPlace(a.id).length)
-        );
-      }
-
       if (this.selectedCategory !== '전체') {
         result = result.filter(
           (place) => place.category === this.selectedCategory
@@ -125,7 +115,6 @@ createApp({
 
       try {
         const params = new URLSearchParams({
-          region: this.region,
           size: '500',
         });
 
@@ -139,7 +128,7 @@ createApp({
 
         this.places = items
           .map((place) => LocalHub.normalizePlace(place))
-          .filter((place) => LocalHub.isGumiPlace(place));
+          ;
       } catch (error) {
         LocalHub.showToast(
           this,

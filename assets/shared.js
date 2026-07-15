@@ -105,18 +105,7 @@ const LocalHub = {
   },
 
   isGumiPlace(place) {
-    const addressMatched = String(place.address || '').includes('구미');
-
-    // 구미시와 인접 지역을 포함한 안전 범위입니다.
-    const coordinateMatched =
-      Number.isFinite(place.latitude) &&
-      Number.isFinite(place.longitude) &&
-      place.latitude >= 35.95 &&
-      place.latitude <= 36.40 &&
-      place.longitude >= 128.10 &&
-      place.longitude <= 128.60;
-
-    return addressMatched && coordinateMatched;
+    return true;
   },
 
   buildContextQuery(context = {}) {
@@ -169,7 +158,6 @@ const LocalHub = {
       레포츠: '🏃',
       숙박: '🏨',
       쇼핑: '🛍️',
-      여행코스: '🧭',
     })[category] || '📌';
   },
 
