@@ -87,7 +87,9 @@ createApp({
     async submitPost() {
       this.loading = true;
       try {
-        const selectedPlaceId = String(this.form.placeId);
+        const selectedPlaceId = this.form.placeId
+          ? String(this.form.placeId)
+          : null;
 
         const payload = {
           title: this.form.title,
@@ -97,8 +99,10 @@ createApp({
 
           // 서버 DTO가 단일 장소 또는 배열 방식 중 어느 쪽이든
           // 장소 태그를 받을 수 있도록 둘 다 전달합니다.
-          placeId: selectedPlaceId,
-          placeIds: [selectedPlaceId],
+          ...(selectedPlaceId && {
+            placeId: selectedPlaceId,
+            placeIds: [selectedPlaceId],
+          }),
         };
 
         const result = await LocalHub.apiRequest(

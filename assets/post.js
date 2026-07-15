@@ -110,7 +110,12 @@ createApp({
           `/posts/${encodeURIComponent(this.post.id)}/comments`,
           { method: 'POST', body: JSON.stringify(this.commentForm) }
         );
-        this.post.comments.push({ ...comment, id: String(comment.id) });
+        const newComment = { ...comment, id: String(comment.id) };
+
+        if (!this.post.comments.some((item) => item.id === newComment.id)) {
+          this.post.comments.push(newComment);
+        }
+
         this.post.commentCount = this.post.comments.length;
         this.commentForm = { author: '', content: '', password: '' };
         LocalHub.showToast(this, '댓글이 등록되었습니다.', 'success');

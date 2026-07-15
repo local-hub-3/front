@@ -76,7 +76,14 @@ createApp({
       try {
         const data = await LocalHub.apiRequest('/posts?size=200&sort=latest');
         const items = Array.isArray(data) ? data : data?.items || [];
-        this.posts = items.map((post) => LocalHub.normalizePost(post));
+        this.posts = Array.from(
+          new Map(
+            items.map((post) => {
+              const normalized = LocalHub.normalizePost(post);
+              return [normalized.id, normalized];
+            })
+          ).values()
+        );
       } catch (error) {
         LocalHub.showToast(this, `게시글을 불러오지 못했습니다. ${error.message}`);
       } finally {

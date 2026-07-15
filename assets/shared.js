@@ -138,11 +138,22 @@ const LocalHub = {
     return {
       ...post,
       id: String(post.id),
-      placeIds: (post.placeIds || []).map(String),
-      comments: (post.comments || []).map((comment) => ({
-        ...comment,
-        id: String(comment.id),
-      })),
+      placeIds: Array.from(new Set(
+        (post.placeIds || post.placeId ? [ ...(post.placeIds || []), ...(post.placeId ? [post.placeId] : []) ] : [])
+          .map(String)
+          .filter(Boolean)
+      )),
+      comments: Array.from(
+        new Map(
+          (post.comments || []).map((comment) => [
+            String(comment.id ?? `${comment.author}-${comment.content}`),
+            {
+              ...comment,
+              id: String(comment.id),
+            },
+          ])
+        ).values()
+      ),
       commentCount: post.commentCount ?? post.comments?.length ?? 0,
       views: post.views ?? 0,
     };
