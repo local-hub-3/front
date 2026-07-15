@@ -26,7 +26,15 @@ createApp({
       boardFilters: { category: '전체', placeId: '', keyword: '' },
       passwordModal: { open: false, action: '', value: '', error: '', show: false },
       postForm: { title: '', content: '', placeId: '', author: '', password: '' },
-      commentForm: { author: '', content: '' },
+      commentForm: { author: '', content: '', password: '' },
+      commentModal: {
+        open: false,
+        action: '',
+        comment: null,
+        content: '',
+        password: '',
+        error: '',
+      },
       loading: { places: false, posts: false, detail: false, submit: false, chat: false },
       toast: { visible: false, message: '', type: 'error' },
       toastTimer: null,
@@ -180,7 +188,10 @@ createApp({
         ...post,
         id: post.id,
         placeIds: (post.placeIds || []).map(String),
-        comments: post.comments || [],
+        comments: (post.comments || []).map((comment) => ({
+          ...comment,
+          id: String(comment.id),
+        })),
         commentCount: post.commentCount ?? post.comments?.length ?? 0,
         views: post.views ?? 0,
       };
@@ -525,9 +536,10 @@ createApp({
       if (
         !this.currentPost ||
         !this.commentForm.author ||
-        !this.commentForm.content
+        !this.commentForm.content ||
+        !this.commentForm.password
       ) {
-        this.showToast('작성자와 댓글 내용을 모두 입력해 주세요.');
+        this.showToast('작성자, 댓글 내용, 비밀번호를 모두 입력해 주세요.');
         return;
       }
 
@@ -544,13 +556,126 @@ createApp({
 
         this.currentPost.comments = [
           ...(this.currentPost.comments || []),
-          comment,
+          {
+            ...comment,
+            id: String(comment.id),
+          },
         ];
         this.currentPost.commentCount = this.currentPost.comments.length;
-        this.commentForm = { author: '', content: '' };
+        this.commentForm = { author: '', content: '', password: '' };
         this.showToast('댓글이 등록되었습니다.', 'success');
       } catch (error) {
         this.showToast(`댓글 등록에 실패했습니다. ${error.message}`);
+      } finally {
+        this.loading.submit = false;
+      }
+    },
+
+    requestCommentAction(action, comment) {
+      this.commentModal = {
+        open: true,
+        action,
+        comment,
+        content: comment.content || '',
+        password: '',
+        error: '',
+      };
+    },
+
+    closeCommentModal() {
+      this.commentModal = {
+        open: false,
+        action: '',
+        comment: null,
+        content: '',
+        password: '',
+        error: '',
+      };
+    },
+
+    async confirmCommentAction() {
+      if (!this.currentPost || !this.commentModal.comment) {
+        this.showToast('댓글 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      if (!this.commentModal.password) {
+        this.commentModal.error = '비밀번호를 입력해 주세요.';
+        return;
+      }
+
+      if (
+        this.commentModal.action === 'edit' &&
+        !this.commentModal.content
+      ) {
+        this.commentModal.error = '수정할 댓글 내용을 입력해 주세요.';
+        return;
+      }
+
+      this.commentModal.error = '';
+      this.loading.submit = true;
+
+      const postId = encodeURIComponent(this.currentPost.id);
+      const commentId = encodeURIComponent(this.commentModal.comment.id);
+
+      try {
+        if (this.commentModal.action === 'edit') {
+          const updated = await this.apiRequest(
+            `/posts/${postId}/comments/${commentId}`,
+            {
+              method: 'PUT',
+              body: JSON.stringify({
+                content: this.commentModal.content,
+                password: this.commentModal.password,
+              }),
+            }
+          );
+
+          const index = this.currentPost.comments.findIndex(
+            (comment) =>
+              String(comment.id) ===
+              String(this.commentModal.comment.id)
+          );
+
+          if (index >= 0) {
+            this.currentPost.comments.splice(index, 1, {
+              ...this.currentPost.comments[index],
+              ...updated,
+              id: String(updated.id ?? this.commentModal.comment.id),
+            });
+          }
+
+          this.closeCommentModal();
+          this.showToast('댓글이 수정되었습니다.', 'success');
+        } else {
+          await this.apiRequest(
+            `/posts/${postId}/comments/${commentId}`,
+            {
+              method: 'DELETE',
+              body: JSON.stringify({
+                password: this.commentModal.password,
+              }),
+            }
+          );
+
+          this.currentPost.comments = this.currentPost.comments.filter(
+            (comment) =>
+              String(comment.id) !==
+              String(this.commentModal.comment.id)
+          );
+          this.currentPost.commentCount =
+            this.currentPost.comments.length;
+
+          this.closeCommentModal();
+          this.showToast('댓글이 삭제되었습니다.', 'success');
+        }
+      } catch (error) {
+        this.commentModal.error = error.message;
+        this.showToast(
+          `댓글 ${
+            this.commentModal.action === 'edit' ? '수정' : '삭제'
+          }에 실패했습니다. ${error.message}`
+        );
       } finally {
         this.loading.submit = false;
       }

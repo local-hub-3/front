@@ -218,10 +218,34 @@
           <h3>댓글 <span>{{ currentPost.comments?.length || 0 }}</span></h3>
         </div>
 
-        <div v-for="comment in currentPost.comments" :key="comment.id" class="comment">
-          <strong>{{ comment.author }}</strong>
-          <span>{{ comment.content }}</span>
-        </div>
+        <article
+          v-for="comment in currentPost.comments"
+          :key="comment.id"
+          class="comment"
+        >
+          <div class="comment-author">
+            <strong>{{ comment.author }}</strong>
+            <time v-if="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
+          </div>
+
+          <p>{{ comment.content }}</p>
+
+          <div class="comment-actions">
+            <button
+              type="button"
+              @click="requestCommentAction('edit', comment)"
+            >
+              수정
+            </button>
+            <button
+              class="danger"
+              type="button"
+              @click="requestCommentAction('delete', comment)"
+            >
+              삭제
+            </button>
+          </div>
+        </article>
 
         <p v-if="!currentPost.comments?.length" class="empty-text">첫 댓글을 남겨보세요.</p>
       </section>
@@ -229,6 +253,12 @@
       <form class="comment-form" @submit.prevent="submitComment">
         <input v-model.trim="commentForm.author" placeholder="작성자" required />
         <input v-model.trim="commentForm.content" placeholder="댓글을 입력하세요" required />
+        <input
+          v-model="commentForm.password"
+          type="password"
+          placeholder="수정·삭제용 비밀번호"
+          required
+        />
         <button class="primary" :disabled="loading.submit">
           {{ loading.submit ? '등록 중' : '댓글 등록' }}
         </button>
@@ -379,6 +409,73 @@
         <button type="button" @click="closePasswordModal">취소</button>
         <button class="primary" type="button" :disabled="loading.submit" @click="confirmPassword">
           확인
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div
+    v-if="commentModal.open"
+    class="modal-backdrop"
+    @click.self="closeCommentModal"
+  >
+    <section class="comment-modal" role="dialog" aria-modal="true">
+      <button
+        class="back-button modal-back"
+        type="button"
+        @click="closeCommentModal"
+      >
+        <span>←</span> 댓글
+      </button>
+      <button
+        class="close"
+        type="button"
+        aria-label="댓글 팝업 닫기"
+        @click="closeCommentModal"
+      >
+        ×
+      </button>
+
+      <div class="modal-icon">
+        {{ commentModal.action === 'edit' ? '✏️' : '🗑️' }}
+      </div>
+      <h2>
+        댓글 {{ commentModal.action === 'edit' ? '수정' : '삭제' }}
+      </h2>
+
+      <label v-if="commentModal.action === 'edit'" class="comment-edit-label">
+        <span>댓글 내용</span>
+        <textarea
+          v-model.trim="commentModal.content"
+          rows="5"
+          placeholder="수정할 댓글 내용을 입력하세요."
+        ></textarea>
+      </label>
+
+      <label class="comment-edit-label">
+        <span>비밀번호</span>
+        <input
+          v-model="commentModal.password"
+          type="password"
+          placeholder="댓글 작성 시 입력한 비밀번호"
+          @keyup.enter="confirmCommentAction"
+        />
+      </label>
+
+      <p v-if="commentModal.error" class="error">
+        {{ commentModal.error }}
+      </p>
+
+      <div class="modal-actions">
+        <button type="button" @click="closeCommentModal">취소</button>
+        <button
+          class="primary"
+          :class="{ danger: commentModal.action === 'delete' }"
+          type="button"
+          :disabled="loading.submit"
+          @click="confirmCommentAction"
+        >
+          {{ loading.submit ? '처리 중...' : '확인' }}
         </button>
       </div>
     </section>

@@ -604,19 +604,61 @@ button.board-row:hover {
 }
 
 .comment {
-  margin-top: 8px;
-  border-radius: 11px;
-  padding: 13px 15px;
+  margin-top: 9px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 14px 15px;
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 125px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 13px;
   background: var(--surface-soft);
+}
+
+.comment-author {
+  display: grid;
+  gap: 5px;
+}
+
+.comment-author time {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.comment > p {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.comment-actions button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: var(--muted);
+  font-size: 12px;
+  background: var(--surface);
+}
+
+.comment-actions button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.comment-actions .danger {
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+  color: var(--danger);
 }
 
 .comment-form {
   margin-top: 17px;
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) auto;
+  grid-template-columns: 130px minmax(0, 1fr) 190px auto;
   gap: 9px;
 }
 
@@ -626,6 +668,59 @@ button.board-row:hover {
   border-radius: 10px;
   padding: 11px 12px;
   outline: none;
+}
+
+.comment-modal {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 40px);
+  position: relative;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 68px 28px 28px;
+  text-align: center;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.comment-modal .modal-back,
+.comment-modal .close {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+
+.comment-modal h2 {
+  margin: 10px 0 20px;
+}
+
+.comment-edit-label {
+  margin-top: 13px;
+  display: grid;
+  gap: 7px;
+  color: var(--text);
+  text-align: left;
+  font-weight: 800;
+}
+
+.comment-edit-label input,
+.comment-edit-label textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px 12px;
+  color: var(--text);
+  outline: none;
+  background: var(--surface);
+  font-weight: 400;
+}
+
+.comment-edit-label textarea {
+  resize: vertical;
+}
+
+.comment-modal .modal-actions .danger {
+  background: var(--danger);
+  box-shadow: none;
 }
 
 .detail-actions {
@@ -1265,6 +1360,10 @@ footer {
 
   .comment {
     grid-template-columns: 1fr;
+  }
+
+  .comment-actions {
+    justify-content: flex-end;
   }
 
   .comment-form,
