@@ -1314,3 +1314,117 @@ footer {
     width: calc(100% - 20px);
   }
 }
+
+/* ===== 화면 높이 보정: 홈에서 푸터까지 한 화면에 표시 ===== */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --topbar-height: 72px;
+  --footer-height: 44px;
+  --recent-panel-height: 205px;
+}
+
+.topbar {
+  height: var(--topbar-height);
+  min-height: var(--topbar-height);
+}
+
+.home-layout {
+  height: calc(100vh - var(--topbar-height) - var(--footer-height));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-filter {
+  top: var(--topbar-height);
+  height: 100%;
+  min-height: 0;
+}
+
+.home-main {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) var(--recent-panel-height);
+  overflow: hidden;
+}
+
+.map-shell,
+#map {
+  min-height: 0;
+  height: 100%;
+}
+
+.recent-posts {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.map-status {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+}
+
+footer {
+  height: var(--footer-height);
+  min-height: var(--footer-height);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .home-layout {
+    height: calc(100vh - var(--topbar-height) - var(--footer-height));
+    overflow-y: auto;
+  }
+
+  .map-filter {
+    height: auto;
+  }
+
+  .home-main {
+    height: auto;
+    min-height: calc(100vh - var(--topbar-height) - var(--footer-height) - 58px);
+    grid-template-rows: minmax(340px, 1fr) var(--recent-panel-height);
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  :root,
+  [data-theme="light"],
+  [data-theme="dark"] {
+    --topbar-height: 112px;
+    --footer-height: 58px;
+    --recent-panel-height: 210px;
+  }
+
+  .topbar {
+    height: var(--topbar-height);
+    min-height: var(--topbar-height);
+  }
+
+  .home-layout {
+    height: auto;
+    min-height: calc(100vh - var(--topbar-height) - var(--footer-height));
+    overflow: visible;
+  }
+
+  .home-main {
+    min-height: 0;
+    grid-template-rows: 46vh var(--recent-panel-height);
+  }
+
+  .map-shell,
+  #map {
+    min-height: 0;
+    height: 100%;
+  }
+
+  footer {
+    height: auto;
+    min-height: var(--footer-height);
+  }
+}
