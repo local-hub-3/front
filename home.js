@@ -8,6 +8,7 @@ createApp({
       places: [],
       posts: [],
       map: null,
+      mapNotice: '',
       markerOverlays: [],
       resizeObserver: null,
       placePopup: null,
@@ -29,6 +30,22 @@ createApp({
         '쇼핑',
         '여행코스',
       ];
+    },
+
+    mapStatusText() {
+      if (this.mapNotice) {
+        return this.mapNotice;
+      }
+
+      if (this.loading.map) {
+        return '지도 초기화 중...';
+      }
+
+      if (this.loading.places) {
+        return '장소 불러오는 중';
+      }
+
+      return `${this.filteredPlaces.length}개 장소 표시 중`;
     },
 
     filteredPlaces() {
@@ -169,6 +186,10 @@ createApp({
       try {
         await window.loadKakaoMapSdk();
 
+        if (!window.kakao?.maps) {
+          throw new Error('카카오 지도 SDK를 사용할 수 없습니다.');
+        }
+
         const mapElement = document.getElementById('map');
 
         if (!mapElement) {
@@ -227,6 +248,7 @@ createApp({
         });
 
         this.resizeObserver.observe(mapElement);
+        this.mapNotice = '';
 
         this.renderMarkers();
 
@@ -253,12 +275,9 @@ createApp({
           }
         });
       } catch (error) {
-        console.error(error);
-
-        LocalHub.showToast(
-          this,
-          `카카오 지도를 초기화하지 못했습니다. ${error.message}`
-        );
+        console.warn('카카오 지도 준비 실패, 지도 없이 계속 진행합니다.', error);
+        this.map = null;
+        this.mapNotice = error?.message || '카카오 지도를 불러오지 못했습니다.';
       } finally {
         this.loading.map = false;
       }
