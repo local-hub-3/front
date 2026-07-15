@@ -1,4 +1,4 @@
-import { createApp } from 'vue';
+const { createApp } = Vue;
 
 createApp({
   data() {
@@ -38,8 +38,8 @@ createApp({
       loading: { places: false, posts: false, detail: false, submit: false, chat: false },
       toast: { visible: false, message: '', type: 'error' },
       toastTimer: null,
-      apiBaseUrl: (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, ''),
-      requestTimeoutMs: Number(import.meta.env.VITE_REQUEST_TIMEOUT_MS) || 10000,
+      apiBaseUrl: (window.APP_CONFIG?.API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, ''),
+      requestTimeoutMs: Number(window.APP_CONFIG?.REQUEST_TIMEOUT_MS) || 10000,
     };
   },
 
