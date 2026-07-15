@@ -3,7 +3,7 @@ window.APP_CONFIG = {
   API_BASE_URL: 'http://localhost:8080/api',
 
   // Kakao Developers에서 발급받은 JavaScript 키
-  KAKAO_MAP_JS_KEY: '여기에_카카오_JavaScript_키를_입력하세요',
+  KAKAO_MAP_JS_KEY: '542e2dc4a4eafbef7bd34f3b0d36f469',
 
   REQUEST_TIMEOUT_MS: 10000
 };
