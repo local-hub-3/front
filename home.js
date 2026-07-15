@@ -12,7 +12,16 @@ createApp({
       resizeObserver: null,
       placePopup: null,
       brokenImages: {},
-      loading: { places: false, posts: false, map: false },
+      chatOpen: false,
+      chatInput: '',
+      chatMessages: [],
+      chatSessionId: LocalHub.createId(),
+      loading: {
+        places: false,
+        posts: false,
+        map: false,
+        chat: false,
+      },
       toast: LocalHub.createToastState(),
     };
   },
@@ -75,6 +84,7 @@ createApp({
     this.resizeObserver?.disconnect();
     this.clearMarkers();
     clearTimeout(this.toast.timer);
+    clearTimeout(this.searchTimer);
   },
 
   methods: {
@@ -422,6 +432,123 @@ createApp({
 
     placeReviews(place) {
       return place.reviewCount || 0;
+    },
+
+    placeName(id) {
+      return this.places.find(
+        (place) => place.id === String(id)
+      )?.name || '추천 장소';
+    },
+
+    toggleChat() {
+      this.chatOpen = !this.chatOpen;
+
+      if (this.chatOpen) {
+        this.scrollChatToBottom();
+      }
+    },
+
+    scrollChatToBottom() {
+      this.$nextTick(() => {
+        const chatLog = this.$refs.chatLog;
+
+        if (chatLog) {
+          chatLog.scrollTop = chatLog.scrollHeight;
+        }
+      });
+    },
+
+    async sendChat() {
+      const message = this.chatInput.trim();
+
+      if (!message || this.loading.chat) return;
+
+      this.chatMessages.push({
+        role: 'user',
+        text: message,
+        placeIds: [],
+      });
+
+      this.chatInput = '';
+      this.loading.chat = true;
+      this.scrollChatToBottom();
+
+      try {
+        const result = await LocalHub.apiRequest('/chat', {
+          method: 'POST',
+          body: JSON.stringify({
+            message,
+            sessionId: this.chatSessionId,
+            region: this.region,
+          }),
+        });
+
+        const recommendedPlaceIds =
+          result?.recommendedPlaceIds ??
+          result?.placeIds ??
+          [];
+
+        this.chatMessages.push({
+          role: 'bot',
+          text:
+            result?.answer ??
+            result?.message ??
+            '답변을 받지 못했습니다.',
+          placeIds: Array.isArray(recommendedPlaceIds)
+            ? recommendedPlaceIds.map(String)
+            : [],
+        });
+      } catch (error) {
+        console.error('챗봇 요청 실패:', error);
+
+        this.chatMessages.push({
+          role: 'bot',
+          text:
+            '현재 챗봇 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+          placeIds: [],
+        });
+
+        LocalHub.showToast(
+          this,
+          `챗봇 연결에 실패했습니다. ${error.message}`
+        );
+      } finally {
+        this.loading.chat = false;
+        this.scrollChatToBottom();
+      }
+    },
+
+    openRecommendedPlace(placeId) {
+      const place = this.places.find(
+        (item) => item.id === String(placeId)
+      );
+
+      if (!place) {
+        LocalHub.showToast(
+          this,
+          '추천 장소 정보를 지도에서 찾지 못했습니다.'
+        );
+        return;
+      }
+
+      this.chatOpen = false;
+      this.selectedCategory = '전체';
+      this.searchKeyword = '';
+
+      this.$nextTick(() => {
+        this.renderMarkers();
+
+        if (this.map && window.kakao?.maps) {
+          const position = new kakao.maps.LatLng(
+            place.latitude,
+            place.longitude
+          );
+
+          this.map.setLevel(4);
+          this.map.setCenter(position);
+          this.placePopup = place;
+        }
+      });
     },
 
     markBroken(id) {

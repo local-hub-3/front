@@ -104,6 +104,90 @@
   </section>
 </div>
 
+
+<button
+  class="chatbot-fab"
+  type="button"
+  :aria-expanded="String(chatOpen)"
+  aria-controls="localhub-chat-panel"
+  @click="toggleChat"
+>
+  <span class="chat-icon">{{ chatOpen ? '×' : '💬' }}</span>
+  <span>{{ chatOpen ? '닫기' : '챗봇' }}</span>
+</button>
+
+<transition name="chat-slide">
+  <section
+    v-if="chatOpen"
+    id="localhub-chat-panel"
+    class="chat-panel"
+    aria-label="지역 안내 챗봇"
+  >
+    <div class="chat-head">
+      <div>
+        <small>LOCAL GUIDE</small>
+        <strong>지역 안내 챗봇</strong>
+      </div>
+      <button
+        type="button"
+        aria-label="챗봇 닫기"
+        @click="chatOpen=false"
+      >
+        ×
+      </button>
+    </div>
+
+    <div ref="chatLog" class="chat-log" aria-live="polite">
+      <div class="chat-message bot">
+        가고 싶은 장소나 구미 지역 정보를 물어보세요.
+      </div>
+
+      <article
+        v-for="(message, index) in chatMessages"
+        :key="`${message.role}-${index}`"
+        :class="['chat-message', message.role]"
+      >
+        <p>{{ message.text }}</p>
+
+        <div
+          v-if="message.role === 'bot' && message.placeIds?.length"
+          class="chat-place-links"
+        >
+          <button
+            v-for="placeId in message.placeIds"
+            :key="placeId"
+            type="button"
+            @click="openRecommendedPlace(placeId)"
+          >
+            📍 {{ placeName(placeId) }}
+          </button>
+        </div>
+      </article>
+
+      <div v-if="loading.chat" class="chat-message bot chat-typing">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <form class="chat-form" @submit.prevent="sendChat">
+      <input
+        v-model.trim="chatInput"
+        type="text"
+        maxlength="500"
+        placeholder="예: 구미 데이트 장소 추천"
+        :disabled="loading.chat"
+        aria-label="챗봇 질문"
+      />
+      <button
+        type="submit"
+        :disabled="!chatInput || loading.chat"
+      >
+        {{ loading.chat ? '대기' : '전송' }}
+      </button>
+    </form>
+  </section>
+</transition>
+
 <footer>
   이 서비스는 한국관광공사 Tour API(TourAPI 4.0)의 데이터를 활용하였습니다.
   출처: 한국관광공사 · 라이선스: 공공누리 제3유형
