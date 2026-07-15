@@ -1,7 +1,6 @@
 createApp({
   data() {
     return {
-      region: '',
       theme: LocalHub.getInitialTheme(),
       searchKeyword: '',
       selectedCategory: '전체',
@@ -115,7 +114,7 @@ createApp({
 
       try {
         const params = new URLSearchParams({
-          size: '500',
+          size: '5000',
         });
 
         const data = await LocalHub.apiRequest(
@@ -263,6 +262,8 @@ createApp({
               this.map.setCenter(position);
               this.placePopup = place;
             }
+          } else if (!saved) {
+            this.fitMarkers();
           }
         });
       } catch (error) {
@@ -322,7 +323,6 @@ createApp({
       this.clearMarkers();
 
       this.filteredPlaces.forEach((place) => {
-        if (!LocalHub.isGumiPlace(place)) return;
 
         const overlay = new kakao.maps.CustomOverlay({
           map: this.map,
@@ -364,9 +364,7 @@ createApp({
         return;
       }
 
-      const validPlaces = this.filteredPlaces.filter(
-        (place) => LocalHub.isGumiPlace(place)
-      );
+      const validPlaces = this.filteredPlaces;
 
       if (!validPlaces.length) {
         this.map.setLevel(7);
@@ -515,7 +513,6 @@ createApp({
           body: JSON.stringify({
             message,
             sessionId: this.chatSessionId,
-            region: this.region,
           }),
         });
 

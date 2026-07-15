@@ -17,7 +17,6 @@
     <span class="brand-mark">L</span>
     <span>LocalHub</span>
   </button>
-  <select aria-label="지역 선택"><option>구미</option></select>
   <div class="global-search">
     <input v-model.trim="searchKeyword" placeholder="맛집, 관광지, 축제, 게시글 검색" @keyup.enter="submitGlobalSearch" />
     <button type="button" @click="submitGlobalSearch">검색</button>
@@ -56,7 +55,7 @@
   <section class="page panel board-page">
     <button class="back-button page-back" type="button" @click="goBack"><span>←</span> {{ filters.placeId ? '선택한 장소로 돌아가기' : '지도로 돌아가기' }}</button>
     <div class="page-title">
-      <div><p>LOCAL COMMUNITY</p><h1>구미 지역 게시판</h1><span>장소별 후기와 지역 정보를 자유롭게 공유하세요.</span></div>
+      <div><p>LOCAL COMMUNITY</p><h1>지역 게시판</h1><span>장소별 후기와 지역 정보를 자유롭게 공유하세요.</span></div>
       <button class="primary" type="button" @click="startWrite">＋ 글 작성</button>
     </div>
 

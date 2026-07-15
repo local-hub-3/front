@@ -61,11 +61,11 @@ createApp({
 
     async fetchPlaces() {
       try {
-        const data = await LocalHub.apiRequest('/places?region=구미&size=500');
+        const data = await LocalHub.apiRequest('/places?size=5000');
         const items = Array.isArray(data) ? data : data?.items || [];
         this.places = items
           .map((place) => LocalHub.normalizePlace(place))
-          .filter((place) => LocalHub.isGumiPlace(place));
+          ;
       } catch (error) {
         LocalHub.showToast(this, `장소 데이터를 불러오지 못했습니다. ${error.message}`);
       }

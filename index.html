@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <title>LocalHub 구미 지도</title>
+  <title>LocalHub 지역 지도</title>
   <link rel="stylesheet" href="/assets/style.css" />
 </head>
 <body>
@@ -168,7 +168,7 @@
 
     <div ref="chatLog" class="chat-log" aria-live="polite">
       <div class="chat-message bot">
-        가고 싶은 장소나 구미 지역 정보를 물어보세요.
+        가고 싶은 장소나 지역 정보를 물어보세요.
       </div>
 
       <article
@@ -203,7 +203,7 @@
         v-model.trim="chatInput"
         type="text"
         maxlength="500"
-        placeholder="예: 구미 데이트 장소 추천"
+        placeholder="예: 데이트 장소 추천"
         :disabled="loading.chat"
         aria-label="챗봇 질문"
       />

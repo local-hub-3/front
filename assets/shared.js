@@ -103,11 +103,6 @@ const LocalHub = {
         this.categoryIcon(place.category ?? place.contentType),
     };
   },
-
-  isGumiPlace(place) {
-    return true;
-  },
-
   buildContextQuery(context = {}) {
     const params = new URLSearchParams();
 
