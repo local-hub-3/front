@@ -414,6 +414,49 @@ createApp({
       this.map.setBounds(bounds, 60, 60, 60, 60);
     },
 
+    clearPlaceContextFromUrl() {
+      const url = new URL(window.location.href);
+
+      url.searchParams.delete('placeId');
+      url.searchParams.delete('from');
+
+      const query = url.searchParams.toString();
+      const cleanUrl =
+        `${url.pathname}${query ? `?${query}` : ''}${url.hash}`;
+
+      window.history.replaceState(
+        window.history.state,
+        '',
+        cleanUrl
+      );
+    },
+
+    closePlacePopup() {
+      this.placePopup = null;
+      this.clearPlaceContextFromUrl();
+    },
+
+    goHome() {
+      this.placePopup = null;
+      this.clearPlaceContextFromUrl();
+
+      // 홈 화면에서 로고를 누른 경우 불필요한 새로고침 없이
+      // 지도 기본 상태로 복귀합니다.
+      this.selectedCategory = '전체';
+      this.searchKeyword = '';
+
+      this.$nextTick(() => {
+        this.renderMarkers();
+
+        if (this.map && window.kakao?.maps) {
+          this.map.setLevel(7);
+          this.map.setCenter(
+            new kakao.maps.LatLng(36.1195, 128.3446)
+          );
+        }
+      });
+    },
+
     openPost(post) {
       location.href =
         `/post/?id=${encodeURIComponent(post.id)}`;

@@ -12,7 +12,7 @@
 <div id="app" v-cloak :data-theme="theme">
 
 <header class="topbar">
-  <button class="brand" type="button" onclick="location.href='/'">
+  <button class="brand" type="button" @click="goHome">
     <span class="brand-mark">L</span>
     <span>LocalHub</span>
   </button>
@@ -118,10 +118,10 @@
   </div>
 </main>
 
-<div v-if="placePopup" class="modal-backdrop" @click.self="placePopup=null">
+<div v-if="placePopup" class="modal-backdrop" @click.self="closePlacePopup">
   <section class="place-popup">
-    <button class="back-button modal-back" type="button" @click="placePopup=null"><span>←</span> 지도</button>
-    <button class="close" type="button" @click="placePopup=null">×</button>
+    <button class="back-button modal-back" type="button" @click="closePlacePopup"><span>←</span> 지도</button>
+    <button class="close" type="button" @click="closePlacePopup">×</button>
     <div class="popup-image">
       <img v-if="placePopup.image && !brokenImages[placePopup.id]" :src="placePopup.image"
         :alt="placePopup.name" @error="markBroken(placePopup.id)" />
