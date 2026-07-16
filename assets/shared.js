@@ -47,13 +47,13 @@ const LocalHub = {
 
       if (!response.ok) {
         const error = new Error(
-          body?.message || `서버 요청에 실패했습니다. (${response.status})`
+          // body?.message || `서버 요청에 실패했습니다. (${response.status})`
+          body?.message || `비밀번호가 일치하지 않습니다.`
         );
-        error.status = response.status;
+        // error.status = response.status;
         error.code = body?.code;
         throw error;
       }
-
       return body;
     } catch (error) {
       if (error.name === 'AbortError') {
