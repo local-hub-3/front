@@ -251,14 +251,22 @@ createApp({
         ny: String(config.KMA_GRID_Y || 96),
       });
       const serviceKey = String(config.KMA_SERVICE_KEY || '');
-      const encodedKey = serviceKey.includes('%')
-        ? serviceKey
-        : encodeURIComponent(serviceKey);
+      const authQueryName = String(config.KMA_AUTH_QUERY_NAME || 'ServiceKey');
+      params.set(authQueryName, serviceKey);
       const baseUrl = String(config.KMA_API_BASE_URL || '').replace(/\/$/, '');
       const response = await fetch(
-        `${baseUrl}/getUltraSrtFcst?ServiceKey=${encodedKey}&${params}`
+        `${baseUrl}/getUltraSrtFcst?${params}`
       );
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        const message = responseText.trim().slice(0, 120) || '응답 본문 없음';
+        throw new Error(`기상청 API 오류 (${response.status}): ${message}`);
+      }
+
       const header = data?.response?.header;
 
       if (!response.ok || header?.resultCode !== '00') {

@@ -8,10 +8,11 @@ window.APP_CONFIG = {
   // 공유 링크에 사용할 운영 사이트 주소
   SITE_BASE_URL: 'https://gumi-community.netlify.app',
 
-  // 공공데이터포털에서 발급받은 기상청 단기예보 일반 인증키(Decoding)를 입력하세요.
+  // 공공데이터포털에서 발급받은 기상청 단기예보 서비스 인증키를 입력하세요.
   // 키가 비어 있거나 API 호출에 실패하면 공개 날씨 API로 자동 대체됩니다.
-  KMA_SERVICE_KEY: '',
+  KMA_SERVICE_KEY: '735b1c729e77af14e509ff161e1d1f6fdebb7d5a5f4991075c871bd4d3f45e0d',
   KMA_API_BASE_URL: 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0',
+  KMA_AUTH_QUERY_NAME: 'ServiceKey',
   KMA_GRID_X: 84,
   KMA_GRID_Y: 96,
   WEATHER_FALLBACK_URL: 'https://api.open-meteo.com/v1/forecast',

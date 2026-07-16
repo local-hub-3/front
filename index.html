@@ -61,6 +61,10 @@ uvicorn main:app --reload --port 8080
       :class="{active:selectedCategory===category}" @click="selectCategory(category)">
       <span>{{ categoryIcon(category) }}</span>{{ category }}
     </button>
+    <div class="map-filter-licenses" aria-label="공공데이터 이용표시">
+      <img src="/assets/img_opencode1_m.jpeg" alt="공공누리 공공저작물 자유이용허락" />
+      <img src="/assets/data-mark01.png" alt="크리에이티브 커먼즈 저작자표시" />
+    </div>
   </aside>
 
   <div class="home-main">
