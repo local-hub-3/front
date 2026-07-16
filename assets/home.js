@@ -138,6 +138,17 @@ createApp({
       LocalHub.hideToast(this);
     },
 
+    formatDate(dateString) {
+        if (!dateString) return '';
+        
+        const str = String(dateString);
+        // 날짜 데이터가 8자리 이상(YYYYMMDD~)인 경우 잘라서 조립
+        if (str.length >= 8) {
+            return `${str.slice(0, 4)}.${str.slice(4, 6)}.${str.slice(6, 8)}`;
+        }
+        return str;
+    },
+
     submitGlobalSearch() {
       if (this.searchKeyword.startsWith('게시글:')) {
         location.href =
