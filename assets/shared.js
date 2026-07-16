@@ -203,6 +203,32 @@ const LocalHub = {
     vm.toast.visible = false;
   },
 
+  async copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied = document.execCommand('copy');
+    textarea.remove();
+
+    if (!copied) {
+      throw new Error('클립보드 복사를 지원하지 않는 브라우저입니다.');
+    }
+  },
+
+  shareBaseUrl() {
+    return (window.APP_CONFIG?.SITE_BASE_URL || window.location.origin).replace(/\/$/, '');
+  },
+
   getQuery(name) {
     return new URLSearchParams(window.location.search).get(name);
   },

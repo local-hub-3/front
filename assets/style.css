@@ -2014,10 +2014,134 @@ footer {
 }
 
 
-/* ===== 80% 너비 최근 게시글 패널 ===== */
-.home-main .recent-posts {
-  width: 80%;
-  justify-self: start;
+/* ===== 최근 게시글 · 구미 날씨 ===== */
+.home-info-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.home-main .recent-posts,
+.weather-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.weather-panel {
+  padding: 19px 22px;
+  overflow: hidden;
+}
+
+.weather-source {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.weather-content {
+  height: calc(100% - 45px);
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(190px, 1.2fr);
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  gap: 6px 24px;
+}
+
+.weather-current {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.weather-icon {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.weather-current strong,
+.weather-current span {
+  display: block;
+}
+
+.weather-current strong {
+  font-size: 35px;
+  line-height: 1;
+}
+
+.weather-current div > span {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.weather-details {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.weather-details div {
+  border-radius: 11px;
+  padding: 10px 8px;
+  text-align: center;
+  background: var(--surface-soft);
+}
+
+.weather-details dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.weather-details dd {
+  margin: 5px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.weather-updated {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.popup-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.share-button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--surface-soft);
+}
+
+.share-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.detail-header {
+  position: relative;
+  padding-right: 86px;
+}
+
+.post-share-button {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 /* ===== 글자 없는 해/달 테마 토글 ===== */
@@ -2094,7 +2218,36 @@ footer {
 }
 
 @media (max-width: 900px) {
-  .home-main .recent-posts {
+  .home-main {
+    grid-template-rows: minmax(340px, 1fr) auto;
+  }
+
+  .home-info-row {
+    grid-template-columns: 1fr;
+  }
+
+  .home-main .recent-posts,
+  .weather-panel {
+    min-height: var(--recent-panel-height);
+  }
+}
+
+@media (max-width: 640px) {
+  .home-main {
+    grid-template-rows: 46vh auto;
+  }
+
+  .weather-content {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .weather-details {
     width: 100%;
+  }
+
+  .detail-header {
+    padding-right: 0;
+    padding-top: 48px;
   }
 }

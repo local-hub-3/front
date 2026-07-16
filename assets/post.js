@@ -83,6 +83,18 @@ createApp({
       location.href = `/?placeId=${encodeURIComponent(id)}`;
     },
 
+    async sharePost() {
+      const url = `${LocalHub.shareBaseUrl()}/post/?id=${encodeURIComponent(this.post.id)}`;
+      const text = `${this.post.title}\n${url}`;
+
+      try {
+        await LocalHub.copyText(text);
+        LocalHub.showToast(this, '공유 링크가 복사되었습니다.', 'success');
+      } catch (error) {
+        LocalHub.showToast(this, error.message);
+      }
+    },
+
     goBack() {
       const params = new URLSearchParams();
 

@@ -71,6 +71,7 @@
       </div>
     </div>
 
+    <div class="home-info-row">
     <section class="recent-posts panel">
       <div class="section-head">
         <div><span class="section-kicker">COMMUNITY</span><h2>최근 게시글</h2></div>
@@ -110,6 +111,28 @@
 
       <p v-else class="empty-text">아직 게시글이 없습니다.</p>
     </section>
+    <section class="weather-panel panel" aria-label="구미시 현재 날씨">
+      <div class="section-head">
+        <div><span class="section-kicker">WEATHER</span><h2>구미시 날씨</h2></div>
+        <a v-if="weather.source === 'Open-Meteo'" class="weather-source" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+        <span v-else class="weather-source">{{ weather.source }}</span>
+      </div>
+      <p v-if="loading.weather" class="loading-text">날씨를 불러오는 중입니다.</p>
+      <div v-else-if="weather.temperature !== null" class="weather-content">
+        <div class="weather-current">
+          <span class="weather-icon" aria-hidden="true">{{ weather.icon }}</span>
+          <div><strong>{{ weather.temperature }}°</strong><span>{{ weather.condition }}</span></div>
+        </div>
+        <dl class="weather-details">
+          <div><dt>습도</dt><dd>{{ weather.humidity }}%</dd></div>
+          <div><dt>바람</dt><dd>{{ weather.windSpeed }} m/s</dd></div>
+          <div><dt>강수량</dt><dd>{{ weather.precipitation }}</dd></div>
+        </dl>
+        <p class="weather-updated">{{ weather.updatedAt }} 기준</p>
+      </div>
+      <p v-else class="empty-text">현재 날씨 정보를 불러올 수 없습니다.</p>
+    </section>
+    </div>
   </div>
 </main>
 
@@ -128,7 +151,10 @@
       <p class="popup-rating">⭐ {{ placeRating(placePopup) }} · 리뷰 {{ placeReviews(placePopup) }}</p>
       <p class="popup-address">{{ placePopup.address }}</p>
       <div class="popup-post-count"><span>연결된 게시글</span><strong>{{ postsForPlace(placePopup.id).length }}개</strong></div>
-      <button class="primary full" type="button" @click="openPlacePosts(placePopup)">관련 게시글 보기</button>
+      <div class="popup-actions">
+        <button class="primary" type="button" @click="openPlacePosts(placePopup)">관련 게시글 보기</button>
+        <button class="share-button" type="button" @click="sharePlace(placePopup)">공유하기</button>
+      </div>
     </div>
   </section>
 </div>

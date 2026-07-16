@@ -55,6 +55,7 @@
   <section v-if="post" class="page panel detail-page">
     <button class="back-button page-back" type="button" @click="goBack"><span>←</span> {{ contextPlaceId ? '해당 장소 게시판으로' : '목록으로' }}</button>
     <header class="detail-header">
+      <button class="share-button post-share-button" type="button" @click="sharePost">공유하기</button>
       <div class="post-tags">
         <button v-for="id in post.placeIds" :key="id" type="button" @click="goPlace(id)">{{ placeName(id) }}</button>
       </div>

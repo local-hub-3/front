@@ -1,3 +1,32 @@
+function weatherAppearance(code, precipitationType = 0) {
+  if (Number(precipitationType) === 3 || Number(precipitationType) === 7) {
+    return { condition: '눈', icon: '🌨️' };
+  }
+  if (Number(precipitationType) > 0) {
+    return { condition: '비', icon: '🌧️' };
+  }
+  if (Number(code) === 1 || Number(code) === 0) {
+    return { condition: '맑음', icon: '☀️' };
+  }
+  if (Number(code) === 3 || (Number(code) >= 1 && Number(code) <= 3)) {
+    return { condition: '구름많음', icon: '⛅' };
+  }
+  if (Number(code) === 4 || Number(code) >= 45) {
+    return { condition: '흐림', icon: '☁️' };
+  }
+  return { condition: '맑음', icon: '🌤️' };
+}
+
+function kmaBaseDateTime() {
+  const kst = new Date(Date.now() + (9 * 60 - 60) * 60 * 1000);
+  const year = kst.getUTCFullYear();
+  const month = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(kst.getUTCDate()).padStart(2, '0');
+  const hour = String(kst.getUTCHours()).padStart(2, '0');
+
+  return { baseDate: `${year}${month}${day}`, baseTime: `${hour}30` };
+}
+
 createApp({
   data() {
     return {
@@ -20,6 +49,17 @@ createApp({
         posts: false,
         map: false,
         chat: false,
+        weather: false,
+      },
+      weather: {
+        temperature: null,
+        humidity: null,
+        windSpeed: null,
+        precipitation: '0mm',
+        condition: '',
+        icon: '🌤️',
+        updatedAt: '',
+        source: '',
       },
       toast: LocalHub.createToastState(),
     };
@@ -64,6 +104,8 @@ createApp({
 
   async mounted() {
     LocalHub.applyTheme(this.theme);
+
+    this.fetchWeather();
 
     await Promise.all([
       this.fetchPlaces(),
@@ -161,6 +203,122 @@ createApp({
       } finally {
         this.loading.posts = false;
       }
+    },
+
+    async fetchWeather() {
+      this.loading.weather = true;
+
+      try {
+        if (window.APP_CONFIG?.KMA_SERVICE_KEY) {
+          try {
+            this.weather = await this.fetchKmaWeather();
+            return;
+          } catch (error) {
+            console.warn('기상청 날씨 호출 실패, 대체 API를 사용합니다.', error);
+          }
+        }
+
+        this.weather = await this.fetchFallbackWeather();
+      } catch (error) {
+        console.error('날씨 정보를 불러오지 못했습니다.', error);
+        this.weather.temperature = null;
+      } finally {
+        this.loading.weather = false;
+      }
+    },
+
+    async fetchKmaWeather() {
+      const config = window.APP_CONFIG || {};
+      const { baseDate, baseTime } = kmaBaseDateTime();
+      const params = new URLSearchParams({
+        pageNo: '1',
+        numOfRows: '1000',
+        dataType: 'JSON',
+        base_date: baseDate,
+        base_time: baseTime,
+        nx: String(config.KMA_GRID_X || 84),
+        ny: String(config.KMA_GRID_Y || 96),
+      });
+      const serviceKey = String(config.KMA_SERVICE_KEY || '');
+      const encodedKey = serviceKey.includes('%')
+        ? serviceKey
+        : encodeURIComponent(serviceKey);
+      const baseUrl = String(config.KMA_API_BASE_URL || '').replace(/\/$/, '');
+      const response = await fetch(
+        `${baseUrl}/getUltraSrtFcst?ServiceKey=${encodedKey}&${params}`
+      );
+      const data = await response.json();
+      const header = data?.response?.header;
+
+      if (!response.ok || header?.resultCode !== '00') {
+        throw new Error(header?.resultMsg || `기상청 API 오류 (${response.status})`);
+      }
+
+      const items = data?.response?.body?.items?.item || [];
+      const forecasts = new Map();
+
+      items.forEach((item) => {
+        const key = `${item.fcstDate}${item.fcstTime}`;
+        if (!forecasts.has(key)) forecasts.set(key, {});
+        forecasts.get(key)[item.category] = item.fcstValue;
+      });
+
+      const [forecastKey, values] = [...forecasts.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))[0] || [];
+
+      if (!values || values.T1H === undefined) {
+        throw new Error('기상청 예보 데이터가 없습니다.');
+      }
+
+      const appearance = weatherAppearance(values.SKY, values.PTY);
+      const precipitation = values.RN1 && values.RN1 !== '강수없음'
+        ? values.RN1.includes('mm') ? values.RN1 : `${values.RN1}mm`
+        : '0mm';
+      const hour = forecastKey?.slice(8, 10) || '--';
+      const minute = forecastKey?.slice(10, 12) || '--';
+
+      return {
+        temperature: Math.round(Number(values.T1H)),
+        humidity: Math.round(Number(values.REH)),
+        windSpeed: Number(values.WSD || 0).toFixed(1),
+        precipitation,
+        ...appearance,
+        updatedAt: `${hour}:${minute}`,
+        source: '기상청',
+      };
+    },
+
+    async fetchFallbackWeather() {
+      const config = window.APP_CONFIG || {};
+      const params = new URLSearchParams({
+        latitude: String(config.GUMI_LATITUDE || 36.1195),
+        longitude: String(config.GUMI_LONGITUDE || 128.3446),
+        current: 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m',
+        wind_speed_unit: 'ms',
+        timezone: 'Asia/Seoul',
+      });
+      const response = await fetch(`${config.WEATHER_FALLBACK_URL}?${params}`);
+      const data = await response.json();
+
+      if (!response.ok || !data?.current) {
+        throw new Error(`대체 날씨 API 오류 (${response.status})`);
+      }
+
+      const current = data.current;
+      const weatherCode = Number(current.weather_code);
+      let precipitationType = 0;
+      if (weatherCode >= 71 && weatherCode <= 77) precipitationType = 3;
+      else if (weatherCode >= 51) precipitationType = 1;
+
+      return {
+        temperature: Math.round(Number(current.temperature_2m)),
+        humidity: Math.round(Number(current.relative_humidity_2m)),
+        windSpeed: Number(current.wind_speed_10m || 0).toFixed(1),
+        precipitation: `${Number(current.precipitation || 0).toFixed(1)}mm`,
+        ...weatherAppearance(weatherCode, precipitationType),
+        updatedAt: String(current.time || '').slice(11, 16),
+        source: 'Open-Meteo',
+      };
     },
 
     async initMap() {
@@ -452,6 +610,18 @@ createApp({
     openPlacePosts(place) {
       location.href =
         `/board/?placeId=${encodeURIComponent(place.id)}&from=map`;
+    },
+
+    async sharePlace(place) {
+      const url = `${LocalHub.shareBaseUrl()}/?placeId=${encodeURIComponent(place.id)}`;
+      const text = `"${place.name}"을 추천합니다\n${url}`;
+
+      try {
+        await LocalHub.copyText(text);
+        LocalHub.showToast(this, '공유 링크가 복사되었습니다.', 'success');
+      } catch (error) {
+        LocalHub.showToast(this, error.message);
+      }
     },
 
     postsForPlace(id) {
